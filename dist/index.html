@@ -256,7 +256,7 @@
       <a href="#visit">Visit us</a>
       <button type="button" id="credits">Photo credits</button>
     </nav>
-    <p class="footer-small">© <span id="year"></span> LeadsGate Enterprise · Website by TabSphere · <a href="options.html">Compare designs A &amp; B</a><br>Client preview. Lifestyle photography is illustrative. Product details and availability are confirmed on enquiry. No payment is taken on this site.</p>
+    <p class="footer-small">© <span id="year"></span> LeadsGate Enterprise · Website by TabSphere · <a href="options.html">Compare designs A &amp; B</a><br>Client preview. Lifestyle photography is illustrative. Prototype checkout: demo prices and stock, Mobile Money payments checked by LeadsGate before confirming. Please don&rsquo;t send real money yet.</p>
   </div>
 </footer>
 
@@ -280,8 +280,10 @@
   </div>
   <div class="drawer-body" id="basket-items"></div>
   <div class="drawer-foot">
-    <p class="fine">Prices and availability are confirmed by LeadsGate. No payment is taken on this site.</p>
-    <button class="btn btn-primary btn-block" type="button" id="enquire">Prepare my enquiry</button>
+    <p class="list-total" id="list-total"></p>
+    <p class="fine">Pay by Mobile Money and upload your proof. LeadsGate checks every payment before confirming. Prototype: demo prices.</p>
+    <a class="btn btn-primary btn-block" id="checkout" href="checkout.html?from=a" hidden>Pay with MoMo</a>
+    <button class="btn btn-ghost btn-block" type="button" id="enquire">Ask a question first</button>
   </div>
 </aside>
 
@@ -295,6 +297,7 @@
 <button class="to-top" type="button" id="to-top" aria-label="Back to top" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
 
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="lg-store.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

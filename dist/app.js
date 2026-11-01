@@ -27,14 +27,26 @@
       cutout: 'assets/products/leadsgate-' + c[0] + '.webp',
       home: 'assets/products/leadsgate-' + c[0] + '-home.webp' };
   });
+  /* Prototype: catalogue, demo prices and stock come from lg-store.js (edited in /admin). */
+  var STORE = window.LGStore || null;
+  if (STORE) {
+    products = STORE.catalogueSync().map(function (r) {
+      var img = r.image.charAt(0) === '/' ? r.image.slice(1) : r.image;
+      return { id: r.id, name: r.name, room: r.room, range: r.range, desc: r.desc, tag: r.tag || '', price: r.price, stock: r.stock,
+        cutout: img, studio: r.builtIn ? 'assets/products/leadsgate-' + r.id + '-studio.webp' : img, home: r.builtIn ? 'assets/products/leadsgate-' + r.id + '-home.webp' : img };
+    });
+  }
   /* Prices in Ghana cedis. Leave a product out until LeadsGate confirms its price:
      cards then show "Price on enquiry". Example: 'cookware-steel': { price: 1299, was: 1499 } */
   var PRICES = {};
+  if (STORE) products.forEach(function (p) { if (p.price != null) PRICES[p.id] = { price: p.price / 100 }; });
+  var LOW = STORE ? STORE.settingsSync().lowStock : 0;
+  function stockNote(p) { if (!STORE || p.stock == null) return ''; return p.stock <= 0 ? '<p class="stock out">Out of stock</p>' : p.stock <= LOW ? '<p class="stock low">Only ' + p.stock + ' left</p>' : '<p class="stock in">In stock</p>'; }
   function money(n) { return '₵' + Number(n).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function priceHtml(id) {
     var pr = PRICES[id];
     if (!pr || typeof pr.price !== 'number') return null;
-    return money(pr.price) + (typeof pr.was === 'number' && pr.was > pr.price ? '<s><span class="sr-only">Was </span>' + money(pr.was) + '</s>' : '');
+    return money(pr.price) + (STORE ? ' <small class="demo">demo</small>' : '') + (typeof pr.was === 'number' && pr.was > pr.price ? '<s><span class="sr-only">Was </span>' + money(pr.was) + '</s>' : '');
   }
 
   var CATS = [
@@ -48,6 +60,7 @@
 
   var byId = {};
   products.forEach(function (p) { byId[p.id] = p; });
+  var GHOST = { cutout: 'assets/leadsgate-monogram.png', name: 'Unavailable item', stock: 0 }; // when admin hides a product used by a room or kit
 
   var ROOMS = [
     { id: 'Kitchen', hero: 'cookware-steel', line: 'Cook something good' },
@@ -88,6 +101,7 @@
   }
   function add(id, n, quiet) {
     if (!byId[id]) return;
+    if (STORE && (state.basket[id] || 0) + (n || 1) > byId[id].stock) { toast(byId[id].stock ? 'Only ' + byId[id].stock + ' available' : byId[id].name + ' is out of stock'); return; }
     state.basket[id] = Math.min((state.basket[id] || 0) + (n || 1), 99);
     save(); renderGrid();
     var b = $('#bag'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
@@ -95,6 +109,7 @@
   }
   function change(id, d) {
     if (!state.basket[id]) return;
+    if (d > 0 && STORE && state.basket[id] + d > byId[id].stock) { toast('Only ' + byId[id].stock + ' available'); return; }
     state.basket[id] += d;
     if (state.basket[id] <= 0) delete state.basket[id];
     save(); renderGrid();
@@ -103,12 +118,13 @@
     var box = $('#basket-items'), ids = Object.keys(state.basket);
     if (!ids.length) {
       box.innerHTML = '<div class="drawer-empty"><strong>Your list is waiting.</strong><span>Pick a room or a home kit to get started.</span></div>';
-      $('#enquire').disabled = true; return;
+      $('#enquire').disabled = true; if ($('#checkout')) { $('#checkout').hidden = true; $('#list-total').textContent = ''; } return;
     }
     $('#enquire').disabled = false;
+    if (STORE && $('#checkout')) { $('#checkout').hidden = false; $('#list-total').textContent = 'Total ' + STORE.money(STORE.quote(state.basket).total) + ' (demo prices)'; }
     box.innerHTML = ids.map(function (id) {
       var p = byId[id];
-      return '<div class="line"><img src="' + p.cutout + '" alt=""><div><p class="line-name">' + esc(p.name) + '</p><p class="fine">Price on enquiry</p>' +
+      return '<div class="line"><img src="' + p.cutout + '" alt=""><div><p class="line-name">' + esc(p.name) + '</p><p class="fine">' + (priceHtml(id) || 'Price on enquiry') + '</p>' +
         '<div class="line-row"><div class="qty"><button type="button" data-minus="' + id + '" aria-label="Remove one ' + esc(p.name) + '">−</button><span>' + state.basket[id] + '</span><button type="button" data-plus="' + id + '" aria-label="Add one ' + esc(p.name) + '">+</button></div>' +
         '<button class="remove" type="button" data-remove="' + id + '">Remove</button></div></div></div>';
     }).join('');
@@ -118,7 +134,7 @@
   function renderRooms() {
     $('#room-tiles').innerHTML = ROOMS.map(function (r) {
       return '<button class="room-chip" type="button" data-room="' + r.id + '" aria-pressed="' + (state.room === r.id) + '">' +
-        '<img src="' + byId[r.hero].cutout + '" alt="" loading="eager"><span><strong>' + r.id + '</strong><small>' + count(r.id) + (count(r.id) === 1 ? ' item' : ' items') + '</small></span></button>';
+        '<img src="' + (byId[r.hero] || GHOST).cutout + '" alt="" loading="eager"><span><strong>' + r.id + '</strong><small>' + count(r.id) + (count(r.id) === 1 ? ' item' : ' items') + '</small></span></button>';
     }).join('');
   }
 
@@ -166,10 +182,10 @@
           '<img class="img-cut" src="' + p.cutout + '" alt="" loading="lazy">' +
           '<img class="img-home" src="' + p.home + '" alt="" loading="lazy"></button>' +
         (p.tag ? '<span class="card-tag">' + p.tag + '</span>' : '') +
-        '<button class="card-add' + (inList ? ' added' : '') + '" type="button" data-add="' + p.id + '" aria-label="' + (inList ? 'Add another ' : 'Add ') + esc(p.name) + ' to your home list">' +
+        '<button class="card-add' + (inList ? ' added' : '') + '" type="button"' + (STORE && p.stock <= (inList || 0) ? ' disabled' : '') + ' data-add="' + p.id + '" aria-label="' + (inList ? 'Add another ' : 'Add ') + esc(p.name) + ' to your home list">' +
           (inList ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>') +
         '</button></div>' +
-        '<div class="card-body"><p class="card-room">' + p.room + '</p><h3><button class="card-name" type="button" data-view="' + p.id + '">' + esc(p.name) + '</button></h3>' + (priceHtml(p.id) ? '<p class="card-price has-price">' + priceHtml(p.id) + '</p>' : '<p class="card-price">Price on enquiry</p>') + (inList ? '<p class="card-price">In your list (' + inList + ')</p>' : '') + '</div></article>';
+        '<div class="card-body"><p class="card-room">' + p.room + '</p><h3><button class="card-name" type="button" data-view="' + p.id + '">' + esc(p.name) + '</button></h3>' + (priceHtml(p.id) ? '<p class="card-price has-price">' + priceHtml(p.id) + '</p>' : '<p class="card-price">Price on enquiry</p>') + stockNote(p) + (inList ? '<p class="card-price">In your list (' + inList + ')</p>' : '') + '</div></article>';
     }).join('');
   }
 
@@ -184,8 +200,8 @@
     show('<div class="detail"><div class="detail-media"><img id="detail-image" src="' + p.studio + '" alt="' + esc(p.name) + '">' +
       '<div class="views" role="group" aria-label="Photo style"><button type="button" data-image="' + p.studio + '" aria-pressed="true">Studio</button><button type="button" data-image="' + p.home + '" aria-pressed="false">In the home</button><button type="button" data-image="' + p.cutout + '" aria-pressed="false">Product only</button></div></div>' +
       '<div class="detail-body"><p class="eyebrow">' + p.room + ' · ' + p.range + '</p><h2>' + esc(p.name) + '</h2><p>' + esc(p.desc) + '</p>' +
-      (priceHtml(p.id) ? '<p class="card-price has-price">' + priceHtml(p.id) + '</p>' : '') + '<p class="fine">' + (priceHtml(p.id) ? 'Exact model, size, colour and stock' : 'Price, exact model, size and colour') + ' are confirmed by LeadsGate when you enquire.</p>' +
-      '<div class="detail-actions"><button class="btn btn-primary" type="button" data-add="' + p.id + '" data-close="1">Add to home list</button><button class="btn btn-ghost" type="button" id="detail-list">View home list</button></div></div></div>', p.name);
+      (priceHtml(p.id) ? '<p class="card-price has-price">' + priceHtml(p.id) + '</p>' : '') + stockNote(p) + '<p class="fine">' + (STORE ? 'Pay by Mobile Money at checkout. Prototype: demo price and stock.' : (priceHtml(p.id) ? 'Exact model, size, colour and stock' : 'Price, exact model, size and colour') + ' are confirmed by LeadsGate when you enquire.') + '</p>' +
+      '<div class="detail-actions"><button class="btn btn-primary" type="button" data-add="' + p.id + '" data-close="1"' + (STORE && p.stock <= 0 ? ' disabled' : '') + '>Add to home list</button><button class="btn btn-ghost" type="button" id="detail-list">View home list</button></div></div></div>', p.name);
   }
   modal.addEventListener('click', function (e) { if (e.target === modal) modal.close(); });
   $('#modal .close').addEventListener('click', function () { modal.close(); });

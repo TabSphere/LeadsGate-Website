@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeadsGate Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#021F45">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Montserrat:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<!-- sign-in -->
+<main class="login" id="login" hidden>
+  <form class="login-card" id="login-form" novalidate>
+    <img src="../assets/leadsgate-wordmark.png" alt="LeadsGate" width="600" height="121">
+    <h1 id="login-title">Admin sign in</h1>
+    <p class="muted" id="login-sub">Enter the admin passcode.</p>
+    <div class="field"><label for="pass">Passcode</label><input id="pass" type="password" autocomplete="current-password" required minlength="10"></div>
+    <div class="field" id="pass2-f" hidden><label for="pass2">Confirm passcode</label><input id="pass2" type="password" autocomplete="new-password"></div>
+    <p class="err" id="login-err" role="alert" hidden></p>
+    <button class="btn btn-primary btn-block" type="submit" id="login-btn">Sign in</button>
+    <p class="proto-note"><strong>Prototype lock.</strong> This passcode only protects the demo in this browser. The live admin will use proper accounts with two-step sign-in, checked on the server.</p>
+  </form>
+</main>
+
+<!-- app -->
+<div class="app" id="app" hidden>
+  <aside class="side">
+    <div class="side-brand"><img src="../assets/leadsgate-wordmark-white.png" alt="LeadsGate" width="600" height="121"><span>Admin</span></div>
+    <nav aria-label="Admin sections">
+      <a href="#dashboard" data-nav="dashboard"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</a>
+      <a href="#orders" data-nav="orders"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.5 11h-11z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Orders<b class="pill" id="nav-awaiting" hidden></b></a>
+      <a href="#catalogue" data-nav="catalogue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Catalogue</a>
+      <a href="#stock" data-nav="stock"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Stock</a>
+      <a href="#settings" data-nav="settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+      <a href="#activity" data-nav="activity"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Activity log</a>
+    </nav>
+    <div class="side-foot">
+      <a href="../" class="side-link">View Design A</a>
+      <a href="../b/" class="side-link">View Design B</a>
+      <button type="button" class="side-link" id="lock">Lock admin</button>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="proto-bar" role="note"><strong>Prototype.</strong> Demo data saved in this browser only. Orders appear here when placed from this same browser.</div>
+    <main id="view" tabindex="-1"></main>
+  </div>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-title"><div id="dlg-body"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="../lg-store.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

@@ -28,17 +28,30 @@
       studio: A + 'products/leadsgate-' + c[0] + '-studio.webp',
       home: A + 'products/leadsgate-' + c[0] + '-home.webp' };
   });
+  /* Prototype: catalogue, demo prices and stock come from the shared data layer (lg-store.js),
+     which the admin dashboard edits. Without it the static catalogue above is used. */
+  var STORE = window.LGStore || null;
+  if (STORE) {
+    products = STORE.catalogueSync().map(function (r) {
+      var builtIn = r.builtIn, img = r.image.charAt(0) === '/' ? '..' + r.image : r.image;
+      return { id: r.id, name: r.name, room: r.room, range: r.range, desc: r.desc, tag: r.tag || '', price: r.price, stock: r.stock,
+        cutout: img, studio: builtIn ? A + 'products/leadsgate-' + r.id + '-studio.webp' : img, home: builtIn ? A + 'products/leadsgate-' + r.id + '-home.webp' : img };
+    });
+  }
   var byId = {};
   products.forEach(function (p) { byId[p.id] = p; });
 
   /* Prices in Ghana cedis. Add a product only once LeadsGate confirms its price.
      Example: 'cookware-steel': { price: 1299, was: 1499 } */
   var PRICES = {};
+  if (STORE) products.forEach(function (p) { if (p.price != null) PRICES[p.id] = { price: p.price / 100 }; });
+  var LOW = STORE ? STORE.settingsSync().lowStock : 0;
+  function stockNote(p) { if (!STORE || p.stock == null) return ''; return p.stock <= 0 ? '<span class="stock out">Out of stock</span>' : p.stock <= LOW ? '<span class="stock low">Only ' + p.stock + ' left</span>' : '<span class="stock in">In stock</span>'; }
   function money(n) { return '₵' + Number(n).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function priceHtml(id) {
     var pr = PRICES[id];
     if (!pr || typeof pr.price !== 'number') return 'Price on enquiry';
-    return money(pr.price) + (typeof pr.was === 'number' && pr.was > pr.price ? '<s><span class="sr-only">Was </span>' + money(pr.was) + '</s>' : '');
+    return money(pr.price) + (STORE ? ' <small class="demo">demo</small>' : '') + (typeof pr.was === 'number' && pr.was > pr.price ? '<s><span class="sr-only">Was </span>' + money(pr.was) + '</s>' : '');
   }
 
   var GIFTS = ['dinnerware', 'cutlery', 'toaster', 'cookware-steel', 'food-carriers', 'saucepan', 'utensils'];
@@ -104,6 +117,7 @@
   }
   function add(id, n, quiet) {
     if (!byId[id]) return;
+    if (STORE && (state.list[id] || 0) + (n || 1) > byId[id].stock) { toast(byId[id].stock ? 'Only ' + byId[id].stock + ' available' : byId[id].name + ' is out of stock'); return; }
     state.list[id] = Math.min((state.list[id] || 0) + (n || 1), 99);
     persist();
     var b = $('#list-btn'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
@@ -111,6 +125,7 @@
   }
   function change(id, d) {
     if (!state.list[id]) return;
+    if (d > 0 && STORE && state.list[id] + d > byId[id].stock) { toast('Only ' + byId[id].stock + ' available'); return; }
     state.list[id] += d;
     if (state.list[id] <= 0) delete state.list[id];
     persist();
@@ -124,20 +139,22 @@
   /* ---------- cards ---------- */
   var HEART = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-9-9a4.8 4.8 0 0 1 9-3 4.8 4.8 0 0 1 9 3c-2 4.6-9 9-9 9z"/></svg>';
   function card(id, gift) {
-    var p = byId[id];
+    var p = byId[id]; if (!p) return '';
     return '<article class="card" data-card="' + id + '">' +
       '<div class="card-media">' + (gift ? '<span class="tag gift">Gift idea</span>' : p.tag ? '<span class="tag">' + p.tag + '</span>' : '') +
       '<button class="heart" type="button" data-save="' + id + '" aria-pressed="false" aria-label="Save ' + esc(p.name) + '">' + HEART + '</button>' +
       '<button type="button" data-view="' + id + '" aria-label="Quick view: ' + esc(p.name) + '" tabindex="-1"><img src="' + p.cutout + '" alt="" loading="lazy" width="400" height="400"></button></div>' +
       '<div class="card-body"><p class="card-room">' + p.room + '</p><h3><button class="card-name" type="button" data-view="' + id + '">' + esc(p.name) + '</button></h3>' +
-      '<p class="card-price">' + priceHtml(id) + '</p>' +
-      '<button class="card-add" type="button" data-add="' + id + '">Add to list</button></div></article>';
+      '<p class="card-price">' + priceHtml(id) + '</p>' + stockNote(p) +
+      '<button class="card-add" type="button" data-add="' + id + '"' + (STORE && p.stock <= 0 ? ' disabled' : '') + '>Add to list</button></div></article>';
   }
   function syncCards() {
     $$('[data-card]').forEach(function (c) {
       var id = c.getAttribute('data-card'), n = state.list[id] || 0, b = $('.card-add', c), h = $('.heart', c);
       b.classList.toggle('in', n > 0);
-      b.textContent = n ? 'In list (' + n + ') · add one more' : 'Add to list';
+      var out = STORE && byId[id].stock <= 0, max = STORE && n >= byId[id].stock;
+      b.disabled = !!(out || max);
+      b.textContent = out ? 'Out of stock' : max ? 'In list (' + n + ') · max available' : n ? 'In list (' + n + ') · add one more' : 'Add to list';
       h.setAttribute('aria-pressed', String(!!state.saved[id]));
       h.setAttribute('aria-label', (state.saved[id] ? 'Unsave ' : 'Save ') + byId[id].name);
     });
@@ -202,7 +219,7 @@
   /* ---------- kits ---------- */
   function renderKits() {
     $('#kit-cards').innerHTML = KITS.map(function (k) {
-      return '<article class="kit-card"><div class="kit-imgs">' + k.items.slice(0, 4).map(function (id) { return '<img src="' + byId[id].cutout + '" alt="" loading="lazy">'; }).join('') + '</div>' +
+      return '<article class="kit-card"><div class="kit-imgs">' + k.items.filter(function (id) { return byId[id]; }).slice(0, 4).map(function (id) { return '<img src="' + byId[id].cutout + '" alt="" loading="lazy">'; }).join('') + '</div>' +
         '<h3>' + k.name + '</h3><p class="for">' + k.forWho + '</p><p class="count">' + k.items.length + ' essentials</p>' +
         '<button class="btn btn-primary" type="button" data-kit="' + k.id + '">View kit</button></article>';
     }).join('');
@@ -210,7 +227,7 @@
   function openKit(id) {
     var k = KITS.filter(function (x) { return x.id === id; })[0]; if (!k) return;
     show('<div class="panel"><p class="kicker">Home kit</p><h2>' + k.name + '</h2><p class="muted">' + k.forWho + '. Untick anything you already have.</p>' +
-      '<div>' + k.items.map(function (iid) { var p = byId[iid]; return '<label class="line" style="grid-template-columns:24px 56px 1fr;align-items:center"><input type="checkbox" checked value="' + iid + '"><img src="' + p.cutout + '" alt="" style="width:56px;height:56px"><span><span class="line-name">' + esc(p.name) + '</span><br><span class="fine">Price on enquiry</span></span></label>'; }).join('') + '</div>' +
+      '<div>' + k.items.filter(function (iid) { return byId[iid]; }).map(function (iid) { var p = byId[iid]; return '<label class="line" style="grid-template-columns:24px 56px 1fr;align-items:center"><input type="checkbox" checked value="' + iid + '"><img src="' + p.cutout + '" alt="" style="width:56px;height:56px"><span><span class="line-name">' + esc(p.name) + '</span><br><span class="fine">Price on enquiry</span></span></label>'; }).join('') + '</div>' +
       '<div class="panel-actions"><button class="btn btn-primary" type="button" id="kit-add">Add selected to list</button></div></div>', k.name);
     $('#kit-add').addEventListener('click', function () {
       var picked = $$('#modal-content input:checked').map(function (i) { return i.value; });
@@ -229,7 +246,7 @@
       return '<div class="slide ' + s.cls + (i === 0 ? ' on' : '') + '" role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' of ' + SLIDES.length + '"' + (i ? ' aria-hidden="true"' : '') + '>' +
         (s.snow ? '<div class="snow" aria-hidden="true"></div>' : '') +
         '<div class="slide-copy"><p class="kicker">' + s.kicker + '</p><' + H + '>' + s.title + '</' + H + '><p>' + s.text + '</p><div class="btns">' + cta(s.cta, 'btn-gold') + cta(s.cta2, 'btn-line') + '</div></div>' +
-        '<div class="slide-art"><img src="' + byId[s.img].home + '" alt="" ' + (i ? 'loading="lazy"' : 'fetchpriority="high"') + '></div></div>';
+        '<div class="slide-art"><img src="' + (byId[s.img] ? byId[s.img].home : A + 'home.jpg') + '" alt="" ' + (i ? 'loading="lazy"' : 'fetchpriority="high"') + '></div></div>';
     }).join('');
     $('#car-dots').innerHTML = SLIDES.map(function (s, i) { return '<button type="button" aria-label="Slide ' + (i + 1) + ': ' + esc(s.kicker) + '"' + (i === 0 ? ' aria-current="true"' : '') + ' data-dot="' + i + '"></button>'; }).join('');
     setInert();
@@ -307,7 +324,7 @@
       '<div class="qv-thumbs" role="group" aria-label="Image views">' + imgs.map(function (im, i) { return '<button type="button" data-img="' + im[0] + '" data-cover="' + (i === 2) + '" aria-pressed="' + (i === 0) + '" aria-label="' + im[1] + ' view"><img src="' + im[0] + '" alt=""></button>'; }).join('') + '</div></div>' +
       '<div class="qv-info"><p class="kicker">' + p.room + ' · ' + p.range + '</p><h2>' + esc(p.name) + '</h2><p class="price">' + priceHtml(id) + '</p><p class="muted">' + esc(p.desc) + '</p>' +
       '<ul><li>Collect from our Westlands showroom</li><li>Price and availability confirmed before you pay</li></ul>' +
-      '<div class="qv-actions"><button class="btn btn-primary" type="button" data-add="' + id + '">Add to list</button><button class="btn btn-ghost" type="button" data-save="' + id + '">' + (state.saved[id] ? 'Saved' : 'Save for later') + '</button></div>' +
+      '<div class="qv-actions"><button class="btn btn-primary" type="button" data-add="' + id + '"' + (STORE && p.stock <= 0 ? ' disabled' : '') + '>Add to list</button><button class="btn btn-ghost" type="button" data-save="' + id + '">' + (state.saved[id] ? 'Saved' : 'Save for later') + '</button></div>' +
       '<p class="fine">Product shown from supplied photos. Details confirmed by LeadsGate on enquiry.</p></div></div>', p.name);
   }
 
@@ -333,13 +350,14 @@
   function renderDrawer() {
     var ids = Object.keys(state.list);
     $('#panel-list').innerHTML = ids.length ? ids.map(function (id) {
-      var p = byId[id];
-      return '<div class="line"><img src="' + p.cutout + '" alt=""><div><p class="line-name">' + esc(p.name) + '</p><p class="fine">Price on enquiry</p><div class="line-row"><div class="qty"><button type="button" data-minus="' + id + '" aria-label="Remove one ' + esc(p.name) + '">−</button><span>' + state.list[id] + '</span><button type="button" data-plus="' + id + '" aria-label="Add one ' + esc(p.name) + '">+</button></div><button class="link-btn" type="button" data-remove="' + id + '">Remove</button></div></div></div>';
+      var p = byId[id]; if (!p) return '';
+      return '<div class="line"><img src="' + p.cutout + '" alt=""><div><p class="line-name">' + esc(p.name) + '</p><p class="fine">' + priceHtml(id) + '</p><div class="line-row"><div class="qty"><button type="button" data-minus="' + id + '" aria-label="Remove one ' + esc(p.name) + '">−</button><span>' + state.list[id] + '</span><button type="button" data-plus="' + id + '" aria-label="Add one ' + esc(p.name) + '">+</button></div><button class="link-btn" type="button" data-remove="' + id + '">Remove</button></div></div></div>';
     }).join('') : '<div class="drawer-empty"><strong>Your list is empty.</strong><span>Add essentials or a home kit to get started.</span></div>';
     $('#enquire').disabled = !ids.length;
+    var co = $('#checkout'); if (co) { co.hidden = !ids.length; var q = STORE ? STORE.quote(state.list) : null; $('#list-total').textContent = q && ids.length ? 'Total ' + STORE.money(q.total) + ' (demo prices)' : ''; }
     var sv = Object.keys(state.saved);
     $('#panel-saved').innerHTML = sv.length ? sv.map(function (id) {
-      var p = byId[id];
+      var p = byId[id]; if (!p) return '';
       return '<div class="line"><img src="' + p.cutout + '" alt=""><div><p class="line-name">' + esc(p.name) + '</p><div class="line-row"><button class="link-btn" type="button" data-move="' + id + '">Move to list</button><button class="link-btn" type="button" data-save="' + id + '">Remove</button></div></div></div>';
     }).join('') : '<div class="drawer-empty"><strong>Nothing saved yet.</strong><span>Tap the heart on any product to keep it for later.</span></div>';
   }

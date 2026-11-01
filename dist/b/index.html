@@ -193,7 +193,7 @@
     <div><h3>Shop</h3><ul><li><a href="#all">All essentials</a></li><li><a href="#christmas">Christmas picks</a></li><li><a href="#kits">Home kits</a></li></ul></div>
     <div><h3>Visit</h3><ul><li>Adjamanale Bu Ave, Westlands</li><li>GPS: GE-296-8977</li><li><a href="tel:+233243755765">024 375 5765</a></li></ul></div>
     <div><h3>Contact</h3><ul><li><a href="mailto:leadsgateofficial@gmail.com">leadsgateofficial@gmail.com</a></li><li><a href="mailto:leadsgateofficial@outlook.com">leadsgateofficial@outlook.com</a></li></ul></div>
-    <p class="ftr-small">© <span id="year"></span> LeadsGate Enterprise · Website by TabSphere · Client preview. Product details, prices and availability are confirmed on enquiry. No payment is taken on this site.</p>
+    <p class="ftr-small">© <span id="year"></span> LeadsGate Enterprise · Website by TabSphere · Client preview. Prototype checkout: demo prices and stock, Mobile Money payments checked by LeadsGate before confirming. Please don&rsquo;t send real money yet.</p>
   </div>
 </footer>
 
@@ -223,8 +223,10 @@
     <div role="tabpanel" id="panel-saved" aria-labelledby="tab-saved" hidden></div>
   </div>
   <div class="drawer-foot">
-    <p class="fine">Prices and availability are confirmed by LeadsGate. No payment is taken on this site.</p>
-    <button class="btn btn-primary btn-block" type="button" id="enquire">Prepare my enquiry</button>
+    <p class="fine">Pay by Mobile Money and upload your proof. LeadsGate checks every payment before confirming. Prototype: demo prices.</p>
+    <p class="list-total" id="list-total"></p>
+    <a class="btn btn-gold btn-block" id="checkout" href="../checkout.html?from=b" hidden>Pay with MoMo</a>
+    <button class="btn btn-ghost btn-block" type="button" id="enquire">Ask a question first</button>
   </div>
 </aside>
 
@@ -234,6 +236,7 @@
 </dialog>
 
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="../lg-store.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

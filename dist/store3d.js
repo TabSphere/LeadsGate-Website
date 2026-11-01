@@ -2,6 +2,7 @@
    Built with three.js (MIT). Loaded on demand by app.js when the section nears the viewport. */
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/three/OrbitControls.js';
+import { RoomEnvironment } from './vendor/three/RoomEnvironment.js';
 
 const BRAND = { navy: 0x033067, navyDeep: 0x021f45, blue: 0x006bca, blueLight: 0x5ca9f2, white: 0xffffff, gold: 0xffd27a };
 
@@ -229,15 +230,34 @@ export async function init(root, opts) {
   }
   palm(-27, 3.5, 7.5, 0.05); palm(-29.5, 8, 6, -0.06); palm(30, 3.5, 8, -0.05); palm(33, 9, 6.5, 0.07); palm(-11, 23.5, 5.5, 0.03); palm(11, 23.5, 5.8, -0.04);
 
-  /* cars: rounded bodies with glass, rims and lights. Ghana taxis and a trotro. */
-  const paint = (hex) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.3, metalness: 0.55 });
-  const carGlass = new THREE.MeshStandardMaterial({ color: 0x16222f, roughness: 0.06, metalness: 0.85 });
-  const tyreMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.85 });
-  const rimMat = new THREE.MeshStandardMaterial({ color: 0xc9ced6, roughness: 0.25, metalness: 0.9 });
-  const trimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f24, roughness: 0.6 });
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, emissive: 0xfff1d6, emissiveIntensity: 0.15, roughness: 0.2 });
-  const tailMat = new THREE.MeshStandardMaterial({ color: 0xa3122a, emissive: 0xff2a2a, emissiveIntensity: 0.2, roughness: 0.3 });
+  /* cars: rounded bodies, framed glass, bumpers, arches, alloy rims and working lights.
+     Parked cars show dim parking lights at night; moving cars drive with headlight beams. */
+  // a soft studio reflection used only on cars, so paint, glass and chrome read as real surfaces
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const carEnv = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture; pmrem.dispose();
+  const envMats = [];
+  const withEnv = (m, k = 1) => { m.envMap = carEnv; m.envMapIntensity = k; envMats.push([m, k]); return m; };
+  const paint = (hex) => withEnv(new THREE.MeshPhysicalMaterial({ color: hex, roughness: 0.38, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.08 }), 0.32);
+  const carGlass = withEnv(new THREE.MeshPhysicalMaterial({ color: 0x14202c, roughness: 0.04, metalness: 0.1, clearcoat: 1, emissive: 0x0b1420, emissiveIntensity: 0 }), 0.55);
+  const tyreMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.92 });
+  const sidewallMat = new THREE.MeshStandardMaterial({ color: 0x232323, roughness: 0.8 });
+  const rimMat = withEnv(new THREE.MeshStandardMaterial({ color: 0xd3d8df, roughness: 0.18, metalness: 1 }), 1.2);
+  const hubMat = withEnv(new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.3, metalness: 0.9 }), 1);
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x16191d, roughness: 0.55 });
+  const chromeMat = withEnv(new THREE.MeshStandardMaterial({ color: 0xe6e9ee, roughness: 0.1, metalness: 1 }), 1.3);
   const plateMat = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.5 });
+  // two light sets: parked (dim parking lights at night) and driving (full beams)
+  const headParked = new THREE.MeshStandardMaterial({ color: 0xeef3f8, emissive: 0xfff1d6, emissiveIntensity: 0.05, roughness: 0.1, metalness: 0.3 });
+  const tailParked = new THREE.MeshStandardMaterial({ color: 0x8d0f22, emissive: 0xff2030, emissiveIntensity: 0.1, roughness: 0.25 });
+  const headDrive = headParked.clone(), tailDrive = tailParked.clone();
+  const drlMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.6 });
+  const beamTex = canvasTex(128, 256, (g, W, H) => {
+    const r = g.createRadialGradient(W / 2, H * 0.06, 2, W / 2, H * 0.3, H * 0.75);
+    r.addColorStop(0, 'rgba(255,246,222,.95)'); r.addColorStop(0.45, 'rgba(255,240,205,.35)'); r.addColorStop(1, 'rgba(255,240,205,0)');
+    g.fillStyle = r; g.beginPath(); g.moveTo(W * 0.42, 0); g.lineTo(W * 0.58, 0); g.lineTo(W, H); g.lineTo(0, H); g.closePath(); g.fill();
+  });
+  const redTex = canvasTex(64, 64, (g, W) => { const r = g.createRadialGradient(W / 2, W / 2, 0, W / 2, W / 2, W / 2); r.addColorStop(0, 'rgba(255,40,50,.8)'); r.addColorStop(1, 'rgba(255,40,50,0)'); g.fillStyle = r; g.fillRect(0, 0, W, W); });
+  const beamMats = [], carGlows = [];
   const taxiMat = paint(0xf2b316);
   const PROFILES = {
     sedan: { L: 4.6, W: 1.78, r: 0.34, wx: 1.38, yb: 0.36, body: [[-2.3, 0.36], [-2.33, 0.72], [-2.14, 0.98], [-1.5, 1.0], [1.0, 1.0], [2.12, 0.86], [2.33, 0.66], [2.3, 0.36]], cabin: [[-1.55, 0.98], [-0.95, 1.38], [0.35, 1.4], [1.05, 0.98]] },
@@ -254,60 +274,123 @@ export async function init(root, opts) {
     sh.lineTo(P.wx + R, P.yb); sh.absarc(P.wx, P.yb, R, 0, Math.PI, false);
     sh.lineTo(-P.wx + R, P.yb); sh.absarc(-P.wx, P.yb, R, 0, Math.PI, false);
     sh.lineTo(P.body[0][0], P.body[0][1]);
-    const body = new THREE.ExtrudeGeometry(sh, { depth: P.W - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 14 });
+    const body = new THREE.ExtrudeGeometry(sh, { depth: P.W - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 4, curveSegments: 18 });
     body.translate(0, 0, -(P.W - 2 * bev) / 2);
+    // round the body: bowed sides and softened corners in plan
+    const belt = P.body.reduce((m, pt) => Math.max(m, pt[1]), 0), midY = (belt + P.yb) / 2, hh = (belt - P.yb) / 2 + 0.2, hl = P.L / 2;
+    const bp = body.attributes.position;
+    for (let i = 0; i < bp.count; i++) {
+      const x = bp.getX(i), y = bp.getY(i); let z = bp.getZ(i);
+      z *= 1 - 0.07 * Math.pow((y - midY) / hh, 2);
+      const e = Math.max(0, Math.abs(x) / hl - 0.78) / 0.22; z *= 1 - 0.16 * e * e;
+      bp.setZ(i, z);
+    }
+    body.computeVertexNormals();
     const cs = new THREE.Shape(); cs.moveTo(P.cabin[0][0], P.cabin[0][1]); P.cabin.slice(1).forEach((pt) => cs.lineTo(pt[0], pt[1])); cs.lineTo(P.cabin[0][0], P.cabin[0][1]);
     const cw = P.W - 0.26;
-    const cabin = new THREE.ExtrudeGeometry(cs, { depth: cw, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 2 });
+    const cabin = new THREE.ExtrudeGeometry(cs, { depth: cw, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 3 });
     cabin.translate(0, 0, -cw / 2);
+    // tumblehome: the glasshouse leans inwards towards the roof
+    const cTop = Math.max(P.cabin[1][1], P.cabin[2][1]), TAPER = 0.16;
+    const cp = cabin.attributes.position;
+    for (let i = 0; i < cp.count; i++) { const k = THREE.MathUtils.clamp((cp.getY(i) - P.cabin[0][1]) / (cTop - P.cabin[0][1]), 0, 1); cp.setZ(i, cp.getZ(i) * (1 - TAPER * k)); }
+    cabin.computeVertexNormals();
+    // painted pillars: a slightly larger frame around the glass, minus a window opening, on each side
+    const frame = new THREE.Shape(); frame.moveTo(P.cabin[0][0] - 0.02, P.cabin[0][1]); P.cabin.slice(1).forEach((pt) => frame.lineTo(pt[0], pt[1] + (pt[1] > 1.1 ? 0.03 : 0))); frame.lineTo(P.cabin[0][0] - 0.02, P.cabin[0][1]);
+    const inset = (pts, d) => { const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length; return pts.map((p) => [p[0] + Math.sign(cx - p[0]) * d, p[1] + Math.sign(cy - p[1]) * d * 0.7]); };
+    const holePts = inset(P.cabin, 0.13), hole = new THREE.Path(); hole.moveTo(holePts[0][0], holePts[0][1]); holePts.slice(1).forEach((pt) => hole.lineTo(pt[0], pt[1])); hole.lineTo(holePts[0][0], holePts[0][1]);
+    frame.holes.push(hole);
+    const side = new THREE.ShapeGeometry(frame);
     const top = P.cabin[1], top2 = P.cabin[2];
-    const roof = new THREE.BoxGeometry(top2[0] - top[0] + 0.1, 0.06, P.W - 0.2);
+    const roof = new THREE.BoxGeometry(top2[0] - top[0] + 0.12, 0.07, cw * (1 - TAPER) + 0.12);
     roof.translate((top[0] + top2[0]) / 2, Math.max(top[1], top2[1]) + 0.04, 0);
-    const tyre = new THREE.CylinderGeometry(P.r, P.r, 0.24, 22); tyre.rotateX(Math.PI / 2);
-    const rim = new THREE.CylinderGeometry(P.r * 0.6, P.r * 0.6, 0.26, 16); rim.rotateX(Math.PI / 2);
-    return (carGeoCache[kind] = { P, body, cabin, roof, tyre, rim });
+    const tyre = new THREE.CylinderGeometry(P.r, P.r, 0.25, 28); tyre.rotateX(Math.PI / 2);
+    const wall = new THREE.TorusGeometry(P.r * 0.8, P.r * 0.14, 8, 28);
+    const rim = new THREE.CylinderGeometry(P.r * 0.64, P.r * 0.64, 0.05, 24); rim.rotateX(Math.PI / 2);
+    const hub = new THREE.CylinderGeometry(P.r * 0.16, P.r * 0.16, 0.07, 12); hub.rotateX(Math.PI / 2);
+    const spoke = new THREE.BoxGeometry(P.r * 0.5, 0.07, 0.03); spoke.translate(P.r * 0.3, 0, 0);
+    const arch = new THREE.TorusGeometry(P.r + 0.09, 0.05, 6, 20, Math.PI);
+    return (carGeoCache[kind] = { P, body, cabin, side, roof, tilt: Math.atan2(cw / 2 * TAPER, cTop - P.cabin[0][1]), tyre, wall, rim, hub, spoke, arch });
   }
   function makeCar(kind, colour, opt = {}) {
-    const { P, body, cabin, roof, tyre, rim } = carGeos(kind);
+    const { P, body, cabin, side, roof, tilt, tyre, wall, rim, hub, spoke, arch } = carGeos(kind);
     const cast = !mobile;
     const g = new THREE.Group();
     const bodyMat = paint(colour);
+    const head = opt.lit ? headDrive : headParked, tail = opt.lit ? tailDrive : tailParked;
     g.add(mesh(body, bodyMat, { cast }), mesh(cabin, carGlass, { cast: false }), mesh(roof, bodyMat, { cast: false }));
     const add = (geo, mat, x, y, z) => { const m = mesh(geo, mat, { cast: false }); m.position.set(x, y, z); g.add(m); return m; };
     const belt = P.body.reduce((m, pt) => Math.max(m, pt[1]), 0);
     const cabTop = Math.max(P.cabin[1][1], P.cabin[2][1]);
-    add(new THREE.BoxGeometry(0.09, cabTop - belt, P.W - 0.2), bodyMat, (P.cabin[1][0] + P.cabin[2][0]) / 2, (belt + cabTop) / 2, 0); // B-pillar
-    const front = P.L / 2, back = -P.L / 2, lamp = new THREE.BoxGeometry(0.08, 0.13, 0.34);
+    const half = P.W / 2;
+    // painted window frames on both sides, plus B-pillar
+    const frameMat = withEnv(bodyMat.clone(), 0.32); frameMat.side = THREE.DoubleSide;
     [-1, 1].forEach((sd) => {
-      add(lamp, headMat, front - 0.03, P.yb + 0.38, sd * (P.W / 2 - 0.3));
-      add(lamp, tailMat, back + 0.03, P.yb + 0.45, sd * (P.W / 2 - 0.3));
-      add(new THREE.BoxGeometry(0.12, 0.1, 0.18), bodyMat, P.cabin[3][0] - 0.15, belt + 0.1, sd * (P.W / 2 + 0.07)); // mirror
+      const piv = new THREE.Group(); piv.position.set(0, P.cabin[0][1], sd * ((P.W - 0.26) / 2 + 0.065)); piv.rotation.x = sd * tilt;
+      const f = mesh(side, frameMat, { cast: false }); f.position.y = -P.cabin[0][1]; piv.add(f); g.add(piv);
     });
-    add(new THREE.BoxGeometry(0.05, 0.16, P.W * 0.42), trimMat, front + 0.01, P.yb + 0.2, 0); // grille
-    add(new THREE.BoxGeometry(0.03, 0.12, 0.52), plateMat, front + 0.05, P.yb + 0.04, 0);
-    add(new THREE.BoxGeometry(0.03, 0.12, 0.52), plateMat, back - 0.05, P.yb + 0.12, 0);
+    add(new THREE.BoxGeometry(0.11, cabTop - belt, P.W - 0.14), trimMat, (P.cabin[1][0] + P.cabin[2][0]) / 2, (belt + cabTop) / 2, 0);
+    const front = P.L / 2, back = -P.L / 2;
+    // bumpers, skirts, grille, plates
+    add(new THREE.BoxGeometry(0.2, 0.22, P.W - 0.04), trimMat, front - 0.02, P.yb + 0.02, 0);
+    add(new THREE.BoxGeometry(0.2, 0.22, P.W - 0.04), trimMat, back + 0.02, P.yb + 0.04, 0);
+    add(new THREE.BoxGeometry(0.06, 0.2, P.W * 0.46), trimMat, front + 0.02, P.yb + 0.3, 0);
+    for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.02, 0.018, P.W * 0.44), chromeMat, front + 0.06, P.yb + 0.23 + k * 0.06, 0);
+    add(new THREE.BoxGeometry(0.03, 0.12, 0.52), plateMat, front + 0.1, P.yb + 0.04, 0);
+    add(new THREE.BoxGeometry(0.03, 0.12, 0.52), plateMat, back - 0.1, P.yb + 0.16, 0);
+    [-1, 1].forEach((sd) => {
+      // headlight: chrome bezel + lens + LED strip; tail light: red lens wrapping the corner
+      add(new THREE.BoxGeometry(0.06, 0.18, 0.44), chromeMat, front - 0.04, P.yb + 0.42, sd * (half - 0.3));
+      add(new THREE.BoxGeometry(0.08, 0.14, 0.38), head, front - 0.01, P.yb + 0.42, sd * (half - 0.3));
+      add(new THREE.BoxGeometry(0.07, 0.03, 0.4), drlMat, front, P.yb + 0.52, sd * (half - 0.3));
+      add(new THREE.BoxGeometry(0.08, 0.16, 0.42), tail, back + 0.01, P.yb + 0.48, sd * (half - 0.28));
+      add(new THREE.BoxGeometry(0.3, 0.16, 0.06), tail, back + 0.16, P.yb + 0.48, sd * (half + 0.01));
+      add(new THREE.BoxGeometry(0.06, 0.08, 0.14), head, front - 0.05, P.yb + 0.14, sd * (half - 0.22)); // fog lamp
+      // mirrors, handles, skirts, door seams
+      add(new THREE.BoxGeometry(0.16, 0.12, 0.2), bodyMat, P.cabin[3][0] - 0.12, belt + 0.1, sd * (half + 0.1));
+      add(new THREE.BoxGeometry(0.02, 0.09, 0.15), carGlass, P.cabin[3][0] - 0.2, belt + 0.1, sd * (half + 0.12));
+      add(new THREE.BoxGeometry(P.wx * 2 - P.r * 2 - 0.3, 0.1, 0.04), trimMat, 0, P.yb + 0.02, sd * (half + 0.02));
+      add(new THREE.BoxGeometry(P.L * 0.9, 0.025, 0.02), chromeMat, 0, belt - 0.02, sd * (half + 0.01));
+      const seamX = (P.cabin[1][0] + P.cabin[2][0]) / 2;
+      [P.cabin[0][0] + 0.05, seamX, P.cabin[3][0] - 0.02].forEach((x) => add(new THREE.BoxGeometry(0.015, belt - P.yb - 0.12, 0.012), trimMat, x, (belt + P.yb) / 2, sd * (half + 0.012)));
+      [seamX - 0.45, P.cabin[3][0] - 0.45].forEach((x) => add(new THREE.BoxGeometry(0.2, 0.04, 0.03), chromeMat, x, belt - 0.16, sd * (half + 0.02)));
+      // dark wheel arches
+      [P.wx, -P.wx].forEach((x) => { const a = add(arch, trimMat, x, P.yb, sd * (half - 0.02)); a.scale.z = 2; });
+    });
     if (opt.taxi) {
       // Ghana taxis: yellow-painted corners
       const cornerH = belt - P.yb - 0.06, cy = (belt + P.yb) / 2;
-      [-1, 1].forEach((sd) => [front - 0.5, back + 0.5].forEach((x) => add(new THREE.BoxGeometry(0.95, cornerH, 0.02), taxiMat, x, cy, sd * (P.W / 2 + 0.005))));
-      add(new THREE.BoxGeometry(0.03, cornerH * 0.7, P.W * 0.86), taxiMat, front + 0.02, cy - 0.04, 0);
-      add(new THREE.BoxGeometry(0.03, cornerH * 0.7, P.W * 0.86), taxiMat, back - 0.02, cy - 0.02, 0);
+      [-1, 1].forEach((sd) => [front - 0.5, back + 0.5].forEach((x) => add(new THREE.BoxGeometry(0.95, cornerH, 0.02), taxiMat, x, cy, sd * (half + 0.016))));
+      add(new THREE.BoxGeometry(0.03, cornerH * 0.5, P.W * 0.8), taxiMat, front + 0.04, cy - 0.06, 0);
+      add(new THREE.BoxGeometry(0.03, cornerH * 0.5, P.W * 0.8), taxiMat, back - 0.04, cy - 0.04, 0);
+      add(new THREE.BoxGeometry(0.5, 0.14, 0.24), new THREE.MeshStandardMaterial({ color: 0xf2b316, emissive: 0xf2b316, emissiveIntensity: 0.25 }), -0.2, cabTop + 0.14, 0);
     }
-    if (opt.stripe) [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(P.L * 0.86, 0.12, 0.02), paint(opt.stripe), 0, belt - 0.2, sd * (P.W / 2 + 0.005)));
+    if (opt.stripe) [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(P.L * 0.86, 0.12, 0.02), paint(opt.stripe), 0, belt - 0.3, sd * (half + 0.016)));
     if (opt.rack) {
       const rackMat = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: 0.5, metalness: 0.6 });
-      [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(P.L * 0.7, 0.05, 0.05), rackMat, -0.2, cabTop + 0.22, sd * (P.W / 2 - 0.15)));
+      [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(P.L * 0.7, 0.05, 0.05), rackMat, -0.2, cabTop + 0.22, sd * (half - 0.15)));
       for (let x = -1.8; x <= 1.4; x += 0.8) add(new THREE.BoxGeometry(0.05, 0.05, P.W - 0.3), rackMat, x, cabTop + 0.22, 0);
-      for (let x = -1.8; x <= 1.4; x += 1.6) [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(0.05, 0.2, 0.05), rackMat, x, cabTop + 0.12, sd * (P.W / 2 - 0.15)));
+      for (let x = -1.8; x <= 1.4; x += 1.6) [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(0.05, 0.2, 0.05), rackMat, x, cabTop + 0.12, sd * (half - 0.15)));
     }
     const wheels = [];
     [[P.wx, 1], [P.wx, -1], [-P.wx, 1], [-P.wx, -1]].forEach(([x, sd]) => {
-      const w = new THREE.Group(); w.position.set(x, P.r, sd * (P.W / 2 - 0.13));
+      const w = new THREE.Group(); w.position.set(x, P.r, sd * (half - 0.13));
       w.add(mesh(tyre, tyreMat, { cast }));
-      const rm = mesh(rim, rimMat, { cast: false }); rm.position.z = sd * 0.02; w.add(rm);
-      for (let k = 0; k < 5; k++) { const sp = mesh(new THREE.BoxGeometry(P.r * 1.05, 0.05, 0.02), trimMat, { cast: false }); sp.rotation.z = (k / 5) * Math.PI; sp.position.z = sd * 0.14; w.add(sp); }
+      const sw = mesh(wall, sidewallMat, { cast: false }); sw.position.z = sd * 0.12; w.add(sw);
+      const rm = mesh(rim, rimMat, { cast: false }); rm.position.z = sd * 0.12; w.add(rm);
+      const hb = mesh(hub, hubMat, { cast: false }); hb.position.z = sd * 0.14; w.add(hb);
+      for (let k = 0; k < 5; k++) { const sp = mesh(spoke, hubMat, { cast: false }); sp.rotation.z = (k / 5) * Math.PI * 2; sp.position.z = sd * 0.15; w.add(sp); }
       g.add(w); wheels.push(w);
     });
+    if (opt.lit) {
+      // headlight beams on the tarmac and a red glow behind
+      const bm = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
+      beamMats.push(bm);
+      [-1, 1].forEach((sd) => { const b = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 9), bm); b.rotation.x = -Math.PI / 2; b.rotation.z = -Math.PI / 2; b.position.set(front + 4.3, 0.04, sd * 0.55); g.add(b); });
+      const rg = new THREE.MeshBasicMaterial({ map: redTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
+      carGlows.push(rg);
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.2), rg); glow.rotation.x = -Math.PI / 2; glow.position.set(back - 0.9, 0.035, 0); g.add(glow);
+    }
     g.userData.wheels = wheels; g.userData.r = P.r;
     return g;
   }
@@ -324,8 +407,8 @@ export async function init(root, opts) {
   const dashMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
   for (let x = -44; x <= 44; x += 4) { const d = mesh(new THREE.BoxGeometry(2, 0.02, 0.16), dashMat, { cast: false, receive: true }); d.position.set(x, 0.012, 37.9); scene.add(d); }
   const movers = [
-    { car: makeCar('sedan', 0xc0392b, { taxi: true }), z: 39.4, dir: 1, speed: 6.5, x: -30 },
-    { car: makeCar('van', 0xf4f6f8, { stripe: 0xf2b84b, rack: true }), z: 36.4, dir: -1, speed: 5.5, x: 20 }
+    { car: makeCar('sedan', 0xc0392b, { taxi: true, lit: true }), z: 39.4, dir: 1, speed: 6.5, x: -30 },
+    { car: makeCar('van', 0xf4f6f8, { stripe: 0xf2b84b, rack: true, lit: true }), z: 36.4, dir: -1, speed: 5.5, x: 20 }
   ];
   movers.forEach((m) => { m.car.rotation.y = m.dir > 0 ? 0 : Math.PI; m.car.position.set(m.x, 0, m.z); scene.add(m.car); });
   function driveCars(dt) {
@@ -590,6 +673,12 @@ export async function init(root, opts) {
     chevron.material.emissiveIntensity = n * 0.9;
     bannerMat.emissiveMap = bannerMat.map; bannerMat.emissiveIntensity = n * 0.7; bannerMat.needsUpdate = true;
     doorLight.intensity = n * 60;
+    headParked.emissiveIntensity = 0.05 + n * 0.5; tailParked.emissiveIntensity = 0.1 + n * 0.9;
+    headDrive.emissiveIntensity = 0.3 + n * 4; tailDrive.emissiveIntensity = 0.3 + n * 2.4;
+    drlMat.emissiveIntensity = 0.6 + n * 2;
+    beamMats.forEach((m) => { m.opacity = n * 0.5; }); carGlows.forEach((m) => { m.opacity = n * 0.7; });
+    carGlass.emissiveIntensity = n * 0.4;
+    envMats.forEach(([m, k]) => { m.envMapIntensity = k * (1 - n * 0.8); });
     pools.forEach((p) => { p.material.opacity = n * 0.85; });
     downMat.color.setHex(n > 0.5 ? 0xfff1d6 : 0x334455);
     renderer.toneMappingExposure = THREE.MathUtils.lerp(1.05, 1.25, n);
