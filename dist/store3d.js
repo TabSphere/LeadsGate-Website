@@ -229,16 +229,156 @@ export async function init(root, opts) {
   }
   palm(-27, 3.5, 7.5, 0.05); palm(-29.5, 8, 6, -0.06); palm(30, 3.5, 8, -0.05); palm(33, 9, 6.5, 0.07); palm(-11, 23.5, 5.5, 0.03); palm(11, 23.5, 5.8, -0.04);
 
-  /* cars */
-  function car(x, z, color, rot) {
-    const g = new THREE.Group();
-    const body = mesh(new THREE.BoxGeometry(4.3, 0.8, 1.9), new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.5 })); body.position.y = 0.7;
-    const cab = mesh(new THREE.BoxGeometry(2.3, 0.72, 1.72), new THREE.MeshStandardMaterial({ color: 0x1b2b3f, roughness: 0.2, metalness: 0.6 })); cab.position.set(-0.2, 1.42, 0);
-    const wm = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
-    for (const [wx, wz] of [[1.35, 0.95], [-1.35, 0.95], [1.35, -0.95], [-1.35, -0.95]]) { const w = mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 14), wm); w.rotation.x = Math.PI / 2; w.position.set(wx, 0.38, wz); g.add(w); }
-    g.add(body, cab); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g);
+  /* cars: rounded bodies with glass, rims and lights. Ghana taxis and a trotro. */
+  const paint = (hex) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.3, metalness: 0.55 });
+  const carGlass = new THREE.MeshStandardMaterial({ color: 0x16222f, roughness: 0.06, metalness: 0.85 });
+  const tyreMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.85 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0xc9ced6, roughness: 0.25, metalness: 0.9 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f24, roughness: 0.6 });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, emissive: 0xfff1d6, emissiveIntensity: 0.15, roughness: 0.2 });
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0xa3122a, emissive: 0xff2a2a, emissiveIntensity: 0.2, roughness: 0.3 });
+  const plateMat = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.5 });
+  const taxiMat = paint(0xf2b316);
+  const PROFILES = {
+    sedan: { L: 4.6, W: 1.78, r: 0.34, wx: 1.38, yb: 0.36, body: [[-2.3, 0.36], [-2.33, 0.72], [-2.14, 0.98], [-1.5, 1.0], [1.0, 1.0], [2.12, 0.86], [2.33, 0.66], [2.3, 0.36]], cabin: [[-1.55, 0.98], [-0.95, 1.38], [0.35, 1.4], [1.05, 0.98]] },
+    suv: { L: 4.8, W: 1.9, r: 0.4, wx: 1.48, yb: 0.44, body: [[-2.4, 0.44], [-2.43, 1.05], [-2.33, 1.2], [1.15, 1.2], [2.25, 1.02], [2.43, 0.8], [2.4, 0.44]], cabin: [[-2.3, 1.18], [-2.2, 1.76], [0.55, 1.8], [1.25, 1.18]] },
+    hatch: { L: 4.05, W: 1.74, r: 0.33, wx: 1.25, yb: 0.35, body: [[-2.0, 0.35], [-2.04, 0.92], [-1.9, 1.0], [0.85, 1.0], [1.85, 0.84], [2.04, 0.64], [2.0, 0.35]], cabin: [[-1.95, 0.98], [-1.74, 1.42], [0.25, 1.45], [0.95, 0.98]] },
+    van: { L: 5.3, W: 1.9, r: 0.36, wx: 1.72, yb: 0.4, body: [[-2.65, 0.4], [-2.67, 1.25], [2.2, 1.25], [2.56, 1.04], [2.67, 0.6], [2.65, 0.4]], cabin: [[-2.62, 1.23], [-2.58, 2.1], [1.7, 2.14], [2.33, 1.25]] }
+  };
+  const carGeoCache = {};
+  function carGeos(kind) {
+    if (carGeoCache[kind]) return carGeoCache[kind];
+    const P = PROFILES[kind], bev = 0.07, R = P.r + 0.07;
+    const sh = new THREE.Shape(); sh.moveTo(P.body[0][0], P.body[0][1]);
+    P.body.slice(1).forEach((pt) => sh.lineTo(pt[0], pt[1]));
+    sh.lineTo(P.wx + R, P.yb); sh.absarc(P.wx, P.yb, R, 0, Math.PI, false);
+    sh.lineTo(-P.wx + R, P.yb); sh.absarc(-P.wx, P.yb, R, 0, Math.PI, false);
+    sh.lineTo(P.body[0][0], P.body[0][1]);
+    const body = new THREE.ExtrudeGeometry(sh, { depth: P.W - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 14 });
+    body.translate(0, 0, -(P.W - 2 * bev) / 2);
+    const cs = new THREE.Shape(); cs.moveTo(P.cabin[0][0], P.cabin[0][1]); P.cabin.slice(1).forEach((pt) => cs.lineTo(pt[0], pt[1])); cs.lineTo(P.cabin[0][0], P.cabin[0][1]);
+    const cw = P.W - 0.26;
+    const cabin = new THREE.ExtrudeGeometry(cs, { depth: cw, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 2 });
+    cabin.translate(0, 0, -cw / 2);
+    const top = P.cabin[1], top2 = P.cabin[2];
+    const roof = new THREE.BoxGeometry(top2[0] - top[0] + 0.1, 0.06, P.W - 0.2);
+    roof.translate((top[0] + top2[0]) / 2, Math.max(top[1], top2[1]) + 0.04, 0);
+    const tyre = new THREE.CylinderGeometry(P.r, P.r, 0.24, 22); tyre.rotateX(Math.PI / 2);
+    const rim = new THREE.CylinderGeometry(P.r * 0.6, P.r * 0.6, 0.26, 16); rim.rotateX(Math.PI / 2);
+    return (carGeoCache[kind] = { P, body, cabin, roof, tyre, rim });
   }
-  car(-16, 16, 0xf4f6f8, Math.PI / 2); car(-9.6, 16, 0x033067, Math.PI / 2); car(12.8, 16, 0xb8c0c8, Math.PI / 2); car(-25.6, 31, 0xa3122a, -Math.PI / 2); car(19.2, 31, 0xf4f6f8, -Math.PI / 2);
+  function makeCar(kind, colour, opt = {}) {
+    const { P, body, cabin, roof, tyre, rim } = carGeos(kind);
+    const cast = !mobile;
+    const g = new THREE.Group();
+    const bodyMat = paint(colour);
+    g.add(mesh(body, bodyMat, { cast }), mesh(cabin, carGlass, { cast: false }), mesh(roof, bodyMat, { cast: false }));
+    const add = (geo, mat, x, y, z) => { const m = mesh(geo, mat, { cast: false }); m.position.set(x, y, z); g.add(m); return m; };
+    const belt = P.body.reduce((m, pt) => Math.max(m, pt[1]), 0);
+    const cabTop = Math.max(P.cabin[1][1], P.cabin[2][1]);
+    add(new THREE.BoxGeometry(0.09, cabTop - belt, P.W - 0.2), bodyMat, (P.cabin[1][0] + P.cabin[2][0]) / 2, (belt + cabTop) / 2, 0); // B-pillar
+    const front = P.L / 2, back = -P.L / 2, lamp = new THREE.BoxGeometry(0.08, 0.13, 0.34);
+    [-1, 1].forEach((sd) => {
+      add(lamp, headMat, front - 0.03, P.yb + 0.38, sd * (P.W / 2 - 0.3));
+      add(lamp, tailMat, back + 0.03, P.yb + 0.45, sd * (P.W / 2 - 0.3));
+      add(new THREE.BoxGeometry(0.12, 0.1, 0.18), bodyMat, P.cabin[3][0] - 0.15, belt + 0.1, sd * (P.W / 2 + 0.07)); // mirror
+    });
+    add(new THREE.BoxGeometry(0.05, 0.16, P.W * 0.42), trimMat, front + 0.01, P.yb + 0.2, 0); // grille
+    add(new THREE.BoxGeometry(0.03, 0.12, 0.52), plateMat, front + 0.05, P.yb + 0.04, 0);
+    add(new THREE.BoxGeometry(0.03, 0.12, 0.52), plateMat, back - 0.05, P.yb + 0.12, 0);
+    if (opt.taxi) {
+      // Ghana taxis: yellow-painted corners
+      const cornerH = belt - P.yb - 0.06, cy = (belt + P.yb) / 2;
+      [-1, 1].forEach((sd) => [front - 0.5, back + 0.5].forEach((x) => add(new THREE.BoxGeometry(0.95, cornerH, 0.02), taxiMat, x, cy, sd * (P.W / 2 + 0.005))));
+      add(new THREE.BoxGeometry(0.03, cornerH * 0.7, P.W * 0.86), taxiMat, front + 0.02, cy - 0.04, 0);
+      add(new THREE.BoxGeometry(0.03, cornerH * 0.7, P.W * 0.86), taxiMat, back - 0.02, cy - 0.02, 0);
+    }
+    if (opt.stripe) [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(P.L * 0.86, 0.12, 0.02), paint(opt.stripe), 0, belt - 0.2, sd * (P.W / 2 + 0.005)));
+    if (opt.rack) {
+      const rackMat = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: 0.5, metalness: 0.6 });
+      [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(P.L * 0.7, 0.05, 0.05), rackMat, -0.2, cabTop + 0.22, sd * (P.W / 2 - 0.15)));
+      for (let x = -1.8; x <= 1.4; x += 0.8) add(new THREE.BoxGeometry(0.05, 0.05, P.W - 0.3), rackMat, x, cabTop + 0.22, 0);
+      for (let x = -1.8; x <= 1.4; x += 1.6) [-1, 1].forEach((sd) => add(new THREE.BoxGeometry(0.05, 0.2, 0.05), rackMat, x, cabTop + 0.12, sd * (P.W / 2 - 0.15)));
+    }
+    const wheels = [];
+    [[P.wx, 1], [P.wx, -1], [-P.wx, 1], [-P.wx, -1]].forEach(([x, sd]) => {
+      const w = new THREE.Group(); w.position.set(x, P.r, sd * (P.W / 2 - 0.13));
+      w.add(mesh(tyre, tyreMat, { cast }));
+      const rm = mesh(rim, rimMat, { cast: false }); rm.position.z = sd * 0.02; w.add(rm);
+      for (let k = 0; k < 5; k++) { const sp = mesh(new THREE.BoxGeometry(P.r * 1.05, 0.05, 0.02), trimMat, { cast: false }); sp.rotation.z = (k / 5) * Math.PI; sp.position.z = sd * 0.14; w.add(sp); }
+      g.add(w); wheels.push(w);
+    });
+    g.userData.wheels = wheels; g.userData.r = P.r;
+    return g;
+  }
+  function park(kind, colour, x, z, rot, opt) { const c = makeCar(kind, colour, opt); c.position.set(x, 0, z); c.rotation.y = rot; scene.add(c); return c; }
+  const N = Math.PI / 2;
+  const parked = [
+    ['sedan', 0xf4f6f8, -24.8, 16, N], ['suv', 0x1b1f24, -18.4, 16, N], ['sedan', 0x2e7d4f, -15.2, 16, N, { taxi: true }], ['hatch', 0xa3122a, -8.8, 16, -N],
+    ['sedan', 0xb8c0c8, 7.2, 16, N], ['suv', 0xf4f6f8, 13.6, 16, N], ['sedan', 0x033067, 16.8, 16, -N], ['hatch', 0x5ca9f2, 23.2, 16, N], ['sedan', 0xd9d4c7, 29.6, 16, N, { taxi: true }],
+    ['suv', 0xb8c0c8, -28, 31, -N], ['sedan', 0x1b1f24, -21.6, 31, N], ['van', 0xf4f6f8, -12, 31, N, { stripe: 0x006bca, rack: true }], ['sedan', 0xa3122a, 10.4, 31, -N], ['suv', 0x033067, 20, 31, N], ['hatch', 0xf4f6f8, 26.4, 31, -N]
+  ];
+  parked.slice(0, mobile ? 8 : parked.length).forEach((c) => park(...c));
+
+  /* the main drive aisle with a taxi and a trotro on the move */
+  const dashMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+  for (let x = -44; x <= 44; x += 4) { const d = mesh(new THREE.BoxGeometry(2, 0.02, 0.16), dashMat, { cast: false, receive: true }); d.position.set(x, 0.012, 37.9); scene.add(d); }
+  const movers = [
+    { car: makeCar('sedan', 0xc0392b, { taxi: true }), z: 39.4, dir: 1, speed: 6.5, x: -30 },
+    { car: makeCar('van', 0xf4f6f8, { stripe: 0xf2b84b, rack: true }), z: 36.4, dir: -1, speed: 5.5, x: 20 }
+  ];
+  movers.forEach((m) => { m.car.rotation.y = m.dir > 0 ? 0 : Math.PI; m.car.position.set(m.x, 0, m.z); scene.add(m.car); });
+  function driveCars(dt) {
+    movers.forEach((m) => {
+      if (m.wait > 0) { m.wait -= dt; return; }
+      m.x += m.dir * m.speed * dt;
+      if (Math.abs(m.x) > 62) { m.x = -62 * m.dir; m.wait = 2 + Math.random() * 5; }
+      m.car.position.x = m.x;
+      m.car.userData.wheels.forEach((w) => { w.rotation.z -= (m.speed * dt) / m.car.userData.r; });
+    });
+  }
+
+  /* flags: Ghana in the middle, LeadsGate either side */
+  const ghanaTex = canvasTex(600, 400, (g, W, H) => {
+    g.fillStyle = '#CE1126'; g.fillRect(0, 0, W, H / 3);
+    g.fillStyle = '#FCD116'; g.fillRect(0, H / 3, W, H / 3);
+    g.fillStyle = '#006B3F'; g.fillRect(0, (2 * H) / 3, W, H / 3);
+    const cx = W / 2, cy = H / 2, R = H / 6, r = R * 0.382;
+    g.fillStyle = '#000000'; g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rad = i % 2 ? r : R; i ? g.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad) : g.moveTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); }
+    g.closePath(); g.fill();
+  });
+  const monoWhite = await imgTex('assets/leadsgate-monogram-white.png');
+  const lgTex = canvasTex(600, 400, (g, W, H) => {
+    g.fillStyle = '#033067'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#006BCA'; g.fillRect(0, H - 34, W, 34);
+    if (monoWhite && monoWhite.image) { const iw = 300, ih = iw * (monoWhite.image.height / monoWhite.image.width); g.drawImage(monoWhite.image, (W - iw) / 2, (H - 34 - ih) / 2, iw, ih); }
+  });
+  const flags = [];
+  const poleMat2 = new THREE.MeshStandardMaterial({ color: 0xe9edf2, roughness: 0.3, metalness: 0.7 });
+  const finialMat = new THREE.MeshStandardMaterial({ color: 0xf2b84b, roughness: 0.3, metalness: 0.8 });
+  function flag(x, z, h, tex, phase) {
+    const pole = mesh(new THREE.CylinderGeometry(0.07, 0.1, h, 10), poleMat2); pole.position.set(x, h / 2, z); scene.add(pole);
+    const fin = mesh(new THREE.SphereGeometry(0.16, 12, 10), finialMat); fin.position.set(x, h + 0.12, z); scene.add(fin);
+    const geo = new THREE.PlaneGeometry(3.3, 2.2, 24, 12); geo.translate(1.65, 0, 0);
+    const base = geo.attributes.position.array.slice();
+    const m = mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75, side: THREE.DoubleSide }), { cast: !mobile });
+    m.position.set(x + 0.08, h - 1.35, z); scene.add(m);
+    flags.push({ geo, base, phase });
+  }
+  function waveFlags(t) {
+    flags.forEach((f) => {
+      const p = f.geo.attributes.position.array;
+      for (let i = 0; i < p.length; i += 3) {
+        const x = f.base[i], k = x / 3.3;
+        p[i + 2] = Math.sin(x * 1.7 - t * 5.2 + f.phase) * 0.22 * k + Math.sin(t * 1.3 + f.phase) * 0.05 * k;
+        p[i + 1] = f.base[i + 1] - k * k * 0.12 + Math.sin(x * 2.4 - t * 6 + f.phase) * 0.04 * k;
+      }
+      f.geo.attributes.position.needsUpdate = true; f.geo.computeVertexNormals();
+    });
+  }
+  flag(-22.6, 7, 15.4, lgTex, 1.1); flag(-19.2, 7, 16.8, ghanaTex, 0); flag(-15.8, 7, 15.4, lgTex, 2.3);
+  waveFlags(0);
 
   /* shoppers: articulated figures with a walk cycle and Ghanaian outfits */
   const SKIN = [0x4a2c1d, 0x5a3825, 0x6b4226, 0x7a4a2e, 0x8d5a3b];
@@ -325,7 +465,7 @@ export async function init(root, opts) {
     const scale = 0.94 + Math.random() * 0.12; g.scale.setScalar(scale);
     return { g, hips, torso, legs, arms, bag };
   }
-  const spots = [new THREE.Vector3(-20, 0, 27), new THREE.Vector3(22, 0, 26), new THREE.Vector3(9, 0, 34), new THREE.Vector3(34, 0, 14), new THREE.Vector3(-13, 0, 19), new THREE.Vector3(15, 0, 19),
+  const spots = [new THREE.Vector3(-20, 0, 27), new THREE.Vector3(22, 0, 26), new THREE.Vector3(9, 0, 34.5), new THREE.Vector3(34, 0, 14), new THREE.Vector3(-13, 0, 19), new THREE.Vector3(15, 0, 19),
     new THREE.Vector3(6, 0, 42), new THREE.Vector3(14, 0, 40), new THREE.Vector3(-2, 0, 44), new THREE.Vector3(22, 0, 38)];
   const door = new THREE.Vector3(0, 0, 2.6);
   const people = [];
@@ -340,7 +480,7 @@ export async function init(root, opts) {
     const s = spots[Math.floor(Math.random() * spots.length)].clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 2));
     const d = door.clone().add(new THREE.Vector3((Math.random() - 0.5) * 5, 0, 0));
     if (p.mode === 'pass') {
-      const z = 44 + Math.random() * 6;
+      const z = 42.5 + Math.random() * 4;
       p.a = new THREE.Vector3(-48 * p.dir, 0, z); p.b = new THREE.Vector3(48 * p.dir, 0, z + (Math.random() - 0.5) * 2);
       p.bag.visible = Math.random() < 0.6;
     } else if (p.mode === 'in') { p.a = s; p.b = d; p.bag.visible = false; } else { p.a = d; p.b = s; p.bag.visible = true; }
@@ -510,6 +650,7 @@ export async function init(root, opts) {
         p.phase += dt * p.speed * 4.6; pose(p, p.phase);
       });
       palms.forEach((c, i) => { c.rotation.z = Math.sin(time * 0.9 + i) * 0.03; });
+      waveFlags(time); driveCars(dt);
       if (xmas.visible && (twinkleT += dt) > 0.3) {
         twinkleT = 0;
         for (let i = 0; i < bulbPts.length; i++) { tmpC.copy(bulbCols[(i + Math.floor(time * 2)) % 4]); bulbs.setColorAt(i, tmpC); }
