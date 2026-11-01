@@ -348,6 +348,40 @@
     });
   }
 
+  /* Christmas promotion banner.
+     Edit the messages here. The banner hides itself after "until" and when a visitor closes it.
+     Do not add discounts or prices until LeadsGate confirms them. */
+  var PROMO = {
+    id: 'christmas-2026',
+    until: '2027-01-07',
+    messages: [
+      'Christmas at LeadsGate · Afehyia pa!',
+      'Gift a home kit this Christmas: cookware, dinnerware and storage',
+      'Ask about our Christmas offers: call 024 375 5765',
+      'Visit the showroom at Adjamanale Bu Ave, Westlands',
+      'Build your Christmas list and we’ll confirm prices and stock'
+    ]
+  };
+  (function setupPromo() {
+    var dismissed = false;
+    try { dismissed = localStorage.getItem('lg-promo-hidden') === PROMO.id; } catch (e) {}
+    if (new Date() > new Date(PROMO.until + 'T23:59:59')) return;
+    document.documentElement.classList.add('promo-on');
+    if (dismissed) return;
+    var star = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 2.9 6.6 7.1.6-5.4 4.7 1.6 7.1L12 17.3 5.8 21l1.6-7.1L2 9.2l7.1-.6z"/></svg>';
+    var group = function (hidden) {
+      return '<div class="promo-group"' + (hidden ? ' aria-hidden="true"' : '') + '>' + PROMO.messages.map(function (m) { return '<span class="promo-item">' + star + esc(m) + '</span>'; }).join('') + '</div>';
+    };
+    $('#promo-track').innerHTML = group(false) + group(true);
+    $('#promo').hidden = false;
+    var w = $('#promo-track').scrollWidth / 2;
+    $('#promo-track').style.setProperty('--ticker-time', Math.max(20, Math.round(w / 55)) + 's');
+    $('#promo-close').addEventListener('click', function () {
+      $('#promo').hidden = true;
+      try { localStorage.setItem('lg-promo-hidden', PROMO.id); } catch (e) {}
+    });
+  })();
+
   $('#year').textContent = new Date().getFullYear();
   renderRooms(); renderCats(); renderGrid(); renderKits(); save();
 })();
