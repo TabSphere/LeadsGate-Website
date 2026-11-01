@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeadsGate | Compare website designs</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#033067">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Montserrat:wght@400;500;600;700;800&display=swap">
+<style>
+  :root { --navy:#033067; --navy-deep:#021F45; --blue:#006BCA; --blue-light:#5CA9F2; --gold:#FFD27A; --muted:#4A5B73; --line:#D6DFEA;
+    --bg:#F3F7FC; --surface:#fff; --text:#0B1A30; --text-2:#4A5B73; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#071427; --surface:#0D1E36; --text:#EAF2FC; --text-2:#A9BCD6; --line:#22395A; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Montserrat',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.55; font-size:15px; }
+  img { max-width:100%; display:block; }
+  a { color:inherit; }
+  :focus-visible { outline:3px solid var(--blue-light); outline-offset:3px; border-radius:8px; }
+  .wrap { width:min(1240px, 100% - 32px); margin-inline:auto; }
+  header { background:var(--navy); color:#fff; padding:28px 0 90px; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .top img { width:170px; }
+  .top span { font-size:12.5px; color:#C9DDF3; border:1px solid rgba(255,255,255,.2); border-radius:999px; padding:6px 12px; }
+  h1 { font-family:'DM Serif Display',Georgia,serif; font-weight:400; font-size:clamp(34px,4.4vw,56px); line-height:1.08; margin:44px 0 12px; max-width:20ch; }
+  header p { color:#C9DDF3; max-width:62ch; margin:0; font-size:16px; }
+  main { margin-top:-60px; padding-bottom:60px; }
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  .opt { background:var(--surface); border:1px solid var(--line); border-radius:22px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(2,31,69,.14); }
+  .shots { position:relative; background:linear-gradient(160deg,#E5F0FB,#C9DDF3); padding:22px 22px 0; display:flex; align-items:flex-end; gap:12px; aspect-ratio: 16 / 10.5; overflow:hidden; }
+  .desk { flex:1; border-radius:12px 12px 0 0; overflow:hidden; box-shadow:0 10px 30px rgba(2,31,69,.25); align-self:stretch; }
+  .desk img { width:100%; height:100%; object-fit:cover; object-position:left top; }
+  .phone { width:24%; flex:none; border:5px solid #0B1A30; border-bottom:0; border-radius:20px 20px 0 0; overflow:hidden; height:84%; box-shadow:0 10px 30px rgba(2,31,69,.3); background:#0B1A30; }
+  .phone img { width:100%; height:100%; object-fit:cover; object-position:top; }
+  .body { padding:24px 26px 26px; display:flex; flex-direction:column; gap:12px; flex:1; }
+  .label { font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--blue); }
+  @media (prefers-color-scheme: dark) { .label { color:var(--blue-light); } }
+  h2 { font-family:'DM Serif Display',Georgia,serif; font-weight:400; font-size:30px; line-height:1.15; margin:0; }
+  .lede { color:var(--text-2); margin:0; }
+  h3 { font-size:13px; font-weight:800; margin:8px 0 0; text-transform:uppercase; letter-spacing:.08em; color:var(--text-2); }
+  ul { margin:0; padding-left:18px; display:grid; gap:4px; font-size:14.5px; }
+  .actions { margin-top:auto; padding-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn { display:inline-flex; align-items:center; gap:8px; border-radius:12px; padding:12px 20px; font-weight:700; text-decoration:none; font-size:14.5px; }
+  .btn-primary { background:var(--blue); color:#fff; } .btn-primary:hover { background:#005BAD; }
+  .btn-gold { background:var(--gold); color:var(--navy-deep); } .btn-gold:hover { background:#FFC655; }
+  .table { margin-top:34px; background:var(--surface); border:1px solid var(--line); border-radius:22px; overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14.5px; min-width:640px; }
+  caption { text-align:left; padding:22px 24px 6px; font-family:'DM Serif Display',Georgia,serif; font-size:26px; }
+  th, td { text-align:left; padding:13px 24px; border-top:1px solid var(--line); vertical-align:top; }
+  thead th { font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--text-2); border-top:0; }
+  tbody th { font-weight:700; width:22%; }
+  .note { margin-top:28px; background:var(--surface); border:1px solid var(--line); border-left:5px solid var(--gold); border-radius:14px; padding:18px 22px; font-size:14px; color:var(--text-2); }
+  .note strong { color:var(--text); }
+  footer { color:var(--text-2); font-size:13px; padding:0 0 40px; }
+  @media (max-width: 860px) { .opts { grid-template-columns:1fr; } header { padding-bottom:80px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top"><img src="assets/leadsgate-wordmark-white.png" alt="LeadsGate" width="600" height="121"><span>Client preview · prepared by TabSphere</span></div>
+    <h1>Two directions for the new LeadsGate website.</h1>
+    <p>Both designs use the same LeadsGate brand, products, contact details and home-list enquiry. They differ in how the first visit feels. Open each one, try it on your phone, and tell us which direction suits LeadsGate best. We can also combine parts of both.</p>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+    <div class="opts">
+      <article class="opt">
+        <div class="shots" aria-hidden="true">
+          <div class="desk"><img src="assets/compare/design-a-desk.webp" alt=""></div>
+          <div class="phone"><img src="assets/compare/design-a-phone.webp" alt=""></div>
+        </div>
+        <div class="body">
+          <p class="label">Design A</p>
+          <h2>The 3D showroom</h2>
+          <p class="lede">Visitors arrive at an interactive 3D LeadsGate store in brand colours, with shoppers, cars, the Ghana flag and a day-to-night switch.</p>
+          <h3>Best for</h3>
+          <ul><li>Making a memorable first impression</li><li>Building trust in the physical showroom</li><li>Brand awareness and social sharing</li></ul>
+          <h3>Trade-offs</h3>
+          <ul><li>Heavier first load on older phones (a still image shows while it loads)</li><li>Products sit further down the page</li><li>The 3D store is a concept illustration, not the real building</li></ul>
+          <div class="actions"><a class="btn btn-primary" href="./">Open Design A</a></div>
+        </div>
+      </article>
+      <article class="opt">
+        <div class="shots" aria-hidden="true">
+          <div class="desk"><img src="assets/compare/design-b-desk.webp" alt=""></div>
+          <div class="phone"><img src="assets/compare/design-b-phone.webp" alt=""></div>
+        </div>
+        <div class="body">
+          <p class="label">Design B</p>
+          <h2>The superstore</h2>
+          <p class="lede">A fast-shopping layout like large Ghanaian retailers: a category menu, a big search bar, a rotating banner, product rails and a Christmas countdown.</p>
+          <h3>Best for</h3>
+          <ul><li>Shoppers who already know what they want</li><li>Growing to a much larger product range</li><li>Running seasonal campaigns and promotions</li></ul>
+          <h3>Trade-offs</h3>
+          <ul><li>Feels more familiar and less distinctive</li><li>Works best once real prices and more products are added</li><li>Banners need fresh content each season</li></ul>
+          <div class="actions"><a class="btn btn-gold" href="b/">Open Design B</a></div>
+        </div>
+      </article>
+    </div>
+
+    <div class="table">
+      <table>
+        <caption>Side by side</caption>
+        <thead><tr><th scope="col">Feature</th><th scope="col">Design A · 3D showroom</th><th scope="col">Design B · Superstore</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">First screen</th><td>Interactive 3D store with headline and search</td><td>Rotating banner with two side tiles</td></tr>
+          <tr><th scope="row">Finding products</th><td>Room chips, search, category row, filtered grid</td><td>Categories menu, live search suggestions, category circles, product rails</td></tr>
+          <tr><th scope="row">Christmas</th><td>Scrolling promo ticker and festive 3D store</td><td>Christmas strip, banner and a countdown to 25 December</td></tr>
+          <tr><th scope="row">Home kits</th><td>Tabbed kit builder</td><td>Kit cards that open a checklist</td></tr>
+          <tr><th scope="row">Lists</th><td>Home list</td><td>Home list plus saved items</td></tr>
+          <tr><th scope="row">Dark mode</th><td>Light only for now</td><td>Follows the device, with a switch</td></tr>
+          <tr><th scope="row">Enquiry</th><td colspan="2">The same in both: an email draft or copied message to LeadsGate. No online payment.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>Before launch:</strong> both designs show “Price on enquiry” because no prices have been confirmed yet. Product names and descriptions come from the supplied photos and need LeadsGate’s check. Home decor and furniture are waiting for product photos.</p>
+  </div>
+</main>
+<footer><div class="wrap">© LeadsGate Enterprise · Website concepts by TabSphere · Client preview, not yet live.</div></footer>
+</body>
+</html>

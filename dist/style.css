@@ -68,6 +68,7 @@ p { margin: 0; }
 .announce .wrap { display: flex; justify-content: space-between; gap: 16px; padding-block: 9px; }
 .announce a { color: var(--white); font-weight: 600; text-decoration: none; }
 .announce-note { opacity: .85; }
+.announce-note a { color: var(--gold); }
 @media (max-width: 760px) { .announce-note, .announce-addr { display: none; } .announce .wrap { justify-content: center; text-align: center; } }
 .site-header { position: sticky; top: 0; z-index: 30; background: rgba(255, 255, 255, .88); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid transparent; transition: border-color .2s var(--ease), box-shadow .2s var(--ease); }
 .site-header.scrolled { border-bottom-color: var(--line); box-shadow: 0 6px 24px rgba(3, 48, 103, .06); }
