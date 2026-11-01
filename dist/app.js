@@ -1,22 +1,307 @@
-const catalogue=[['cookware-steel','Stainless steel cookware set','Kitchen','Utensils'],['saucepan','Colour-pop saucepan','Kitchen','Utensils'],['saute-pan','Everyday sauté pan','Kitchen','Utensils'],['casserole','Covered casserole pot','Kitchen','Utensils'],['utensils','Kitchen utensil set','Kitchen','Utensils'],['nesting-bowls','Nesting kitchen bowls','Kitchen','Utensils'],['toaster','Two-slice toaster','Kitchen','Kitchen Appliances'],['dinnerware','Gather-round dinnerware','Dining','Utensils'],['cutlery','Table-ready cutlery set','Dining','Utensils'],['food-carriers','Food carrier set','Storage','Utensils'],['storage-rect','Rectangular food containers','Storage','Utensils'],['storage-square','Square food containers','Storage','Utensils'],['dish-rack','Two-tier dish rack','Cleaning','Home essentials'],['sink-caddy','Sink organiser & soap dispenser','Cleaning','Home essentials'],['microfibre','Microfibre cleaning cloths','Cleaning','Home essentials']];
-const products=catalogue.map(([id,name,room,range])=>({id,name,room,range,image:`products/leadsgate-${id}-studio.webp`,cutout:`products/leadsgate-${id}.webp`,home:`products/leadsgate-${id}-home.webp`}));
-const $=s=>document.querySelector(s),modal=$('#modal');let room='All',range='All',basket={};
-try{const saved=JSON.parse(localStorage.getItem('leadsgate-list-v2')||'{}');for(const p of products)if(Number.isInteger(saved[p.id])&&saved[p.id]>0)basket[p.id]=Math.min(saved[p.id],99)}catch{}
-function show(html){$('#modal-content').innerHTML=html;if(!modal.open)modal.showModal()}
-let toastTimer;function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2200)}
-function save(){try{localStorage.setItem('leadsgate-list-v2',JSON.stringify(basket))}catch{}$('#count').textContent=Object.values(basket).reduce((a,b)=>a+b,0);renderBasket()}
-function add(id){if(!products.some(p=>p.id===id))return;basket[id]=Math.min((basket[id]||0)+1,99);save();toast('Added to your home list')}
-function render(){const query=$('#search').value.trim().toLowerCase();$('#filters').innerHTML=['All','Kitchen','Dining','Cleaning','Storage','Living'].map(r=>`<button class="${r===room?'active':''}" aria-pressed="${r===room}" data-filter="${r}">${r==='All'?'All essentials':r==='Living'?'Decor & furniture':r}</button>`).join('');const filtered=products.filter(p=>(room==='All'||p.room===room)&&(p.name+' '+p.range).toLowerCase().includes(query));$('#grid').innerHTML=filtered.map(p=>`<article class="product"><div class="photo"><button class="view-product" data-view="${p.id}" aria-label="View ${p.name}"><img src="assets/${p.image}" alt="${p.name}" loading="lazy"></button><span>${p.range}</span><button class="add" data-add="${p.id}" aria-label="Add ${p.name}">+</button></div><h3><button class="name-button" data-view="${p.id}">${p.name}</button></h3><p>Price on enquiry</p></article>`).join('')||(room==='Living'?'<div class="empty"><h3>A little more home, coming together.</h3><p>Ask us about the Home Decor and Furniture ranges. Product images and details are awaiting confirmation.</p><a class="text-link" href="mailto:leadsgateofficial@gmail.com?subject=Home%20decor%20and%20furniture%20enquiry">Enquire about this range ↗</a></div>':'<div class="empty"><h3>No essentials found.</h3><p>Try another room or search term.</p><button class="button" id="reset">Show all essentials</button></div>')}
-function detail(id){const p=products.find(p=>p.id===id);if(!p)return;show(`<div class="detail-grid"><div><img id="detail-image" class="detail-photo" src="assets/${p.image}" alt="${p.name}"><div class="image-options" aria-label="Product image views"><button data-image="${p.image}" aria-pressed="true">Studio</button><button data-image="${p.cutout}" aria-pressed="false">Product</button><button data-image="${p.home}" aria-pressed="false">Alternate</button></div></div><div><p class="eyebrow blue">${p.room} · ${p.range}</p><h2>${p.name}</h2><p>Make room for a useful everyday essential. Add this item to your home list and ask LeadsGate for the current price and availability.</p><p class="sample">From the supplied product image pack. Confirm the exact model, material, dimensions, set contents and colour before ordering.</p><button class="button" data-add="${id}">Add to home list ＋</button><p><button class="text-link name-button" id="detail-list">View my home list ↗</button></p></div></div>`)}
-function renderBasket(){$('#basket-items').innerHTML=Object.entries(basket).map(([id,n])=>{const p=products.find(p=>p.id===id);return `<div class="basket-row"><img src="assets/${p.cutout}" alt="${p.name}"><div>${p.name}<small>Price on enquiry</small><button data-minus="${id}" aria-label="Reduce ${p.name}">−</button> <span>${n}</span> <button data-add="${id}" aria-label="Increase ${p.name}">+</button><button class="remove" data-remove="${id}">Remove</button></div></div>`}).join('')||'<p>Your home list is waiting. Explore a room to get started.</p>';$('#whatsapp').disabled=!Object.keys(basket).length}
-let lastFocus;function openBag(){lastFocus=document.activeElement;if(modal.open)modal.close();$('#drawer').hidden=false;$('#overlay').hidden=false;$('#drawer').setAttribute('role','dialog');$('#drawer').setAttribute('aria-modal','true');document.body.style.overflow='hidden';$('#close-bag').focus()}
-function closeBag(){if($('#drawer').hidden)return;$('#drawer').hidden=true;$('#overlay').hidden=true;document.body.style.overflow='';(lastFocus||$('#bag')).focus()}
-$('#bag').onclick=openBag;$('#close-bag').onclick=closeBag;$('#overlay').onclick=closeBag;$('.close').onclick=()=>modal.close();modal.addEventListener('click',e=>{if(e.target===modal)modal.close()});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeBag();if(e.key==='Tab'&&!$('#drawer').hidden){const nodes=[...$('#drawer').querySelectorAll('button:not(:disabled),a[href],input,textarea')];const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
-const scenes={Kitchen:{image:'kitchen.jpg',title:'Where every good day begins.',items:['cookware-steel','utensils','toaster']},Dining:{image:'dining.jpg',title:'Make room for everyone.',items:['dinnerware','cutlery','food-carriers']},Storage:{image:'home.jpg',title:'Everything in its happy place.',items:['storage-rect','storage-square','nesting-bowls']},Cleaning:{image:'kitchen.jpg',title:'A fresh start, every day.',items:['sink-caddy','dish-rack','microfibre']}};
-function scene(name,scroll=false){const s=scenes[name];if(!s)return;room=name;render();const hero=$('.hero');hero.classList.add('scene-changing');const img=$('.hero>img');img.src='assets/'+s.image;img.alt=name+' — lifestyle inspiration';$('.hero-note').innerHTML=`0${Object.keys(scenes).indexOf(name)+1} / ${name}<br><span>${s.title}</span>`;$('.hero-room-nav').querySelectorAll('button').forEach(b=>{b.classList.toggle('active',b.dataset.scene===name);b.setAttribute('aria-pressed',b.dataset.scene===name)});$('.hero-hotspots').innerHTML=s.items.map((id,i)=>`<button class="hotspot hs${i+1}" data-view="${id}" aria-label="Explore ${products.find(p=>p.id===id).name}"><span>＋</span><b>${products.find(p=>p.id===id).name}</b></button>`).join('');$('#room-preview img').src='assets/'+s.image;$('#room-preview h3').textContent=s.title;$('.rooms').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.room===name));setTimeout(()=>hero.classList.remove('scene-changing'),300);if(scroll)$('#products').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.add){add(b.dataset.add);return}if(b.dataset.view)detail(b.dataset.view);if(b.dataset.filter){room=b.dataset.filter;render()}if(b.dataset.scene)scene(b.dataset.scene);if(b.dataset.room)scene(b.dataset.room,true);if(b.dataset.minus){const id=b.dataset.minus;if(--basket[id]<=0)delete basket[id];save()}if(b.dataset.remove){delete basket[b.dataset.remove];save()}if(b.dataset.image){$('#detail-image').src='assets/'+b.dataset.image;$('.image-options').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))}if(b.id==='detail-list')openBag();if(b.id==='reset'){$('#search').value='';room='All';render()}});$('#search').oninput=render;
-$('#kit-open').onclick=()=>show(`<p class="eyebrow blue">YOUR HOME KIT</p><h2>Start with what you need.</h2><p>Choose the essentials for your home. We’ll put them in one enquiry.</p><form id="kit-form"><div class="kit-options">${products.map(p=>`<label class="kit-choice"><input type="checkbox" name="kit" value="${p.id}"><img src="assets/${p.cutout}" alt=""><span>${p.name}<small>Price on enquiry</small></span></label>`).join('')}</div><p id="kit-summary">0 items selected · Total: awaiting quote</p><button class="button" type="submit">Add selected items ＋</button></form>`);
-modal.addEventListener('change',()=>{if($('#kit-form'))$('#kit-summary').textContent=`${$('#kit-form').querySelectorAll(':checked').length} items selected · Total: awaiting quote`});modal.addEventListener('submit',e=>{if(e.target.id==='kit-form'){e.preventDefault();const ids=[...e.target.querySelectorAll(':checked')].map(x=>x.value);if(!ids.length){toast('Choose at least one essential');return}ids.forEach(id=>basket[id]=Math.min((basket[id]||0)+1,99));save();modal.close();openBag()}});
-$('#whatsapp').onclick=()=>{const message='Hello LeadsGate, please confirm prices and availability for my home list:\n\n'+Object.entries(basket).map(([id,n])=>`${n} × ${products.find(p=>p.id===id).name}`).join('\n')+'\n\nPlease confirm the exact product details and delivery or collection options. Thank you.';closeBag();show('<p class="eyebrow blue">YOUR ENQUIRY</p><h2>A little closer to home.</h2><p>Review your list, then open an email draft or copy it. Nothing is sent automatically.</p><textarea id="message" aria-label="Your enquiry message"></textarea><div class="enquiry-actions"><button class="button" id="email-enquiry">Open email draft ↗</button><button class="button light" id="copy">Copy enquiry</button></div>');$('#message').value=message;$('#email-enquiry').onclick=()=>location.href='mailto:leadsgateofficial@gmail.com?subject='+encodeURIComponent('My LeadsGate home list')+'&body='+encodeURIComponent($('#message').value);$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText($('#message').value);toast('Enquiry copied')}catch{$('#message').select();toast('Select and copy your enquiry')}}};
-$('#credits').onclick=()=>show(`<p class="eyebrow blue">PHOTOGRAPHY</p><h2>Spaces that inspire.</h2><p>Product images: supplied LeadsGate product pack. Room imagery is illustrative lifestyle inspiration from Pexels and does not show LeadsGate premises or confirmed furniture stock.</p><p><a target="_blank" rel="noopener" href="https://www.pexels.com/photo/interior-of-modern-kitchen-with-dining-table-5825363/">Kitchen · Charlotte May ↗</a></p><p><a target="_blank" rel="noopener" href="https://www.pexels.com/photo/table-with-chairs-in-kitchen-6297088/">Dining · Max Vakhtbovych ↗</a></p><p><a target="_blank" rel="noopener" href="https://www.pexels.com/photo/modern-kitchen-interior-with-furniture-and-dining-zone-6186826/">Home · Max Vakhtbovych ↗</a></p>`);$('#year').textContent=new Date().getFullYear();render();save();
+(function () {
+  'use strict';
+  document.documentElement.classList.add('js');
+
+  /* Catalogue: names and descriptions are based on the supplied product images.
+     Exact specifications, prices and stock are confirmed by LeadsGate on enquiry. */
+  var catalogue = [
+    ['cookware-steel', 'Stainless steel cookware set', 'Kitchen', 'Utensils', 'Two frying pans, a stockpot, a saucepan and a sauté pan, with matching lids.', 'Set'],
+    ['saucepan', 'Colour-pop saucepan', 'Kitchen', 'Utensils', 'Cream saucepan with a glass lid and a coral silicone rim, knob and handle.'],
+    ['saute-pan', 'Everyday sauté pan', 'Kitchen', 'Utensils', 'Wide, deep pan with a glass lid and gold-tone handles.'],
+    ['casserole', 'Covered casserole pot', 'Kitchen', 'Utensils', 'Two-handled pot with a glass lid and soft-grip handles and knob.'],
+    ['utensils', 'Kitchen utensil set', 'Kitchen', 'Utensils', 'Spoons, turners, whisk, tongs, ladle and more in a ribbed holder.', 'Set'],
+    ['nesting-bowls', 'Nesting kitchen bowls', 'Kitchen', 'Utensils', 'Mixing bowls, colander and measuring cups that stack into one.'],
+    ['toaster', 'Two-slice toaster', 'Kitchen', 'Kitchen Appliances', 'Two-slot toaster with cancel, reheat and defrost buttons.'],
+    ['dinnerware', 'Gather-round dinnerware', 'Dining', 'Utensils', 'White textured set with bowls, plates, cups and saucers, and two platters.', 'Set'],
+    ['cutlery', 'Table-ready cutlery set', 'Dining', 'Utensils', 'Stainless steel knives, forks, spoons and teaspoons in a gift box.'],
+    ['food-carriers', 'Food carrier set', 'Storage', 'Utensils', 'Insulated carriers with stainless steel inner pots and locking lids, in several sizes.'],
+    ['storage-rect', 'Rectangular food containers', 'Storage', 'Utensils', 'Clear containers with four clip locks, in three sizes.'],
+    ['storage-square', 'Square food containers', 'Storage', 'Utensils', 'Square clear containers with four clip locks, in three sizes.'],
+    ['dish-rack', 'Two-tier dish rack', 'Cleaning', 'Home essentials', 'Folding rack for plates, bowls and mugs, with a drip tray.'],
+    ['sink-caddy', 'Sink organiser & soap dispenser', 'Cleaning', 'Home essentials', 'Soap pump, sponge tray and cloth rail in one unit.'],
+    ['microfibre', 'Microfibre cleaning cloths', 'Cleaning', 'Home essentials', 'Reusable cloths on a roll. Pack shows 50 per roll, 25 × 25 cm.']
+  ];
+  var products = catalogue.map(function (c) {
+    return { id: c[0], name: c[1], room: c[2], range: c[3], desc: c[4], tag: c[5] || '',
+      studio: 'assets/products/leadsgate-' + c[0] + '-studio.webp',
+      cutout: 'assets/products/leadsgate-' + c[0] + '.webp',
+      home: 'assets/products/leadsgate-' + c[0] + '-home.webp' };
+  });
+  var byId = {};
+  products.forEach(function (p) { byId[p.id] = p; });
+
+  var ROOMS = [
+    { id: 'Kitchen', hero: 'cookware-steel', line: 'Cook something good' },
+    { id: 'Dining', hero: 'dinnerware', line: 'Make room for everyone' },
+    { id: 'Cleaning', hero: 'sink-caddy', line: 'A fresh start daily' },
+    { id: 'Storage', hero: 'storage-square', line: 'Everything in its place' }
+  ];
+  var KITS = [
+    { id: 'first-kitchen', name: 'First kitchen', forWho: 'For a new home or first flat', desc: 'Everything to cook and serve a meal from day one.', items: ['cookware-steel', 'utensils', 'nesting-bowls', 'dinnerware', 'cutlery'] },
+    { id: 'sink', name: 'Clean and tidy sink', forWho: 'For a quick kitchen refresh', desc: 'Keep the sink area clear and the dishes drying.', items: ['sink-caddy', 'dish-rack', 'microfibre'] },
+    { id: 'pantry', name: 'Pantry reset', forWho: 'For organised shelves and leftovers', desc: 'See what you have and keep food fresh and portable.', items: ['storage-rect', 'storage-square', 'food-carriers'] }
+  ];
+  var EMAIL = 'leadsgateofficial@gmail.com';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var modal = $('#modal');
+  var state = { room: 'All', query: '', kit: 'first-kitchen', kitOff: {}, basket: {} };
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function count(room) { return products.filter(function (p) { return room === 'All' || p.room === room; }).length; }
+
+  try {
+    var saved = JSON.parse(localStorage.getItem('leadsgate-list-v2') || '{}');
+    products.forEach(function (p) { if (Number.isInteger(saved[p.id]) && saved[p.id] > 0) state.basket[p.id] = Math.min(saved[p.id], 99); });
+  } catch (e) {}
+
+  /* toast */
+  var toastTimer;
+  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200); }
+
+  /* basket */
+  function total() { return Object.keys(state.basket).reduce(function (a, k) { return a + state.basket[k]; }, 0); }
+  function save() {
+    try { localStorage.setItem('leadsgate-list-v2', JSON.stringify(state.basket)); } catch (e) {}
+    $('#count').textContent = total();
+    renderBasket();
+  }
+  function add(id, n, quiet) {
+    if (!byId[id]) return;
+    state.basket[id] = Math.min((state.basket[id] || 0) + (n || 1), 99);
+    save(); renderGrid();
+    var b = $('#bag'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
+    if (!quiet) toast(byId[id].name + ' added to your home list');
+  }
+  function change(id, d) {
+    if (!state.basket[id]) return;
+    state.basket[id] += d;
+    if (state.basket[id] <= 0) delete state.basket[id];
+    save(); renderGrid();
+  }
+  function renderBasket() {
+    var box = $('#basket-items'), ids = Object.keys(state.basket);
+    if (!ids.length) {
+      box.innerHTML = '<div class="drawer-empty"><strong>Your list is waiting.</strong><span>Pick a room or a home kit to get started.</span></div>';
+      $('#enquire').disabled = true; return;
+    }
+    $('#enquire').disabled = false;
+    box.innerHTML = ids.map(function (id) {
+      var p = byId[id];
+      return '<div class="line"><img src="' + p.cutout + '" alt=""><div><p class="line-name">' + esc(p.name) + '</p><p class="fine">Price on enquiry</p>' +
+        '<div class="line-row"><div class="qty"><button type="button" data-minus="' + id + '" aria-label="Remove one ' + esc(p.name) + '">−</button><span>' + state.basket[id] + '</span><button type="button" data-plus="' + id + '" aria-label="Add one ' + esc(p.name) + '">+</button></div>' +
+        '<button class="remove" type="button" data-remove="' + id + '">Remove</button></div></div></div>';
+    }).join('');
+  }
+
+  /* rooms */
+  function renderRooms() {
+    $('#room-tiles').innerHTML = ROOMS.map(function (r) {
+      return '<button class="room" type="button" data-room="' + r.id + '" aria-pressed="' + (state.room === r.id) + '">' +
+        '<span class="room-name">' + r.id + '</span>' +
+        '<span class="room-meta"><span class="arrow" aria-hidden="true">→</span>' + count(r.id) + ' essentials</span>' +
+        '<img src="' + byId[r.hero].cutout + '" alt="" loading="eager"></button>';
+    }).join('');
+  }
+
+  /* shop grid */
+  function setRoom(room, scroll) {
+    state.room = room;
+    renderRooms(); renderGrid();
+    if (scroll) $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+  function renderFilters() {
+    var rooms = ['All'].concat(ROOMS.map(function (r) { return r.id; })).concat(['Living']);
+    $('#filters').innerHTML = rooms.map(function (r) {
+      var label = r === 'All' ? 'All' : r === 'Living' ? 'Decor & furniture' : r;
+      var n = r === 'Living' ? '' : '<span class="n">' + count(r) + '</span>';
+      return '<button class="chip" type="button" data-filter="' + r + '" aria-pressed="' + (state.room === r) + '">' + label + n + '</button>';
+    }).join('');
+  }
+  function renderGrid() {
+    renderFilters();
+    var q = state.query.trim().toLowerCase();
+    var list = products.filter(function (p) {
+      return (state.room === 'All' || p.room === state.room) && (p.name + ' ' + p.range + ' ' + p.room + ' ' + p.desc).toLowerCase().indexOf(q) !== -1;
+    });
+    $('#shop-title').textContent = state.room === 'All' ? 'Every room, every essential.' : state.room === 'Living' ? 'Home Decor and Furniture.' : 'For the ' + state.room.toLowerCase() + '.';
+    $('#result-count').textContent = state.room === 'Living' ? '' : list.length + (list.length === 1 ? ' essential' : ' essentials') + (q ? ' matching “' + state.query.trim() + '”' : '');
+    if (state.room === 'Living') {
+      $('#grid').innerHTML = '<div class="empty"><div class="icons"><img src="assets/icon-home-decor.png" alt=""><img src="assets/icon-furniture.png" alt=""></div><h3>Decor and furniture, coming together.</h3><p>Ask us about the Home Decor and Furniture ranges. Product photos and details are being confirmed.</p><a class="btn btn-primary" href="mailto:' + EMAIL + '?subject=' + encodeURIComponent('Home decor and furniture enquiry') + '">Ask about this range</a><p class="fine">Or call <a class="text-link" href="tel:+233243755765">024 375 5765</a></p></div>';
+      return;
+    }
+    if (!list.length) {
+      $('#grid').innerHTML = '<div class="empty"><h3>No essentials found.</h3><p>Try another word or room.</p><button class="btn btn-ghost" type="button" id="reset">Show all essentials</button></div>';
+      return;
+    }
+    $('#grid').innerHTML = list.map(function (p, i) {
+      var inList = state.basket[p.id];
+      return '<article class="card" style="animation-delay:' + Math.min(i * 40, 400) + 'ms"><div class="card-top">' +
+        '<button class="card-media" type="button" data-view="' + p.id + '" aria-label="View ' + esc(p.name) + '">' +
+          '<img class="img-cut" src="' + p.cutout + '" alt="" loading="lazy">' +
+          '<img class="img-home" src="' + p.home + '" alt="" loading="lazy"></button>' +
+        (p.tag ? '<span class="card-tag">' + p.tag + '</span>' : '') +
+        '<button class="card-add' + (inList ? ' added' : '') + '" type="button" data-add="' + p.id + '" aria-label="' + (inList ? 'Add another ' : 'Add ') + esc(p.name) + ' to your home list">' +
+          (inList ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>') +
+        '</button></div>' +
+        '<div class="card-body"><p class="card-room">' + p.room + '</p><h3><button class="card-name" type="button" data-view="' + p.id + '">' + esc(p.name) + '</button></h3><p class="card-price">' + (inList ? 'In your list (' + inList + ')' : 'Price on enquiry') + '</p></div></article>';
+    }).join('');
+  }
+
+  /* dialogs */
+  function show(html, label) {
+    $('#modal-content').innerHTML = html;
+    modal.setAttribute('aria-label', label || 'Details');
+    if (!modal.open) modal.showModal();
+  }
+  function detail(id) {
+    var p = byId[id]; if (!p) return;
+    show('<div class="detail"><div class="detail-media"><img id="detail-image" src="' + p.studio + '" alt="' + esc(p.name) + '">' +
+      '<div class="views" role="group" aria-label="Photo style"><button type="button" data-image="' + p.studio + '" aria-pressed="true">Studio</button><button type="button" data-image="' + p.home + '" aria-pressed="false">In the home</button><button type="button" data-image="' + p.cutout + '" aria-pressed="false">Product only</button></div></div>' +
+      '<div class="detail-body"><p class="eyebrow">' + p.room + ' · ' + p.range + '</p><h2>' + esc(p.name) + '</h2><p>' + esc(p.desc) + '</p>' +
+      '<p class="fine">Price, exact model, size and colour are confirmed by LeadsGate when you enquire.</p>' +
+      '<div class="detail-actions"><button class="btn btn-primary" type="button" data-add="' + p.id + '" data-close="1">Add to home list</button><button class="btn btn-ghost" type="button" id="detail-list">View home list</button></div></div></div>', p.name);
+  }
+  modal.addEventListener('click', function (e) { if (e.target === modal) modal.close(); });
+  $('#modal .close').addEventListener('click', function () { modal.close(); });
+
+  /* drawer */
+  var lastFocus;
+  function openBag() {
+    lastFocus = document.activeElement;
+    if (modal.open) modal.close();
+    $('#drawer').hidden = false; $('#overlay').hidden = false;
+    $('#drawer').setAttribute('role', 'dialog'); $('#drawer').setAttribute('aria-modal', 'true');
+    document.body.style.overflow = 'hidden';
+    $('#close-bag').focus();
+  }
+  function closeBag() {
+    if ($('#drawer').hidden) return;
+    $('#drawer').hidden = true; $('#overlay').hidden = true; document.body.style.overflow = '';
+    (lastFocus || $('#bag')).focus();
+  }
+  $('#bag').addEventListener('click', openBag);
+  $('#close-bag').addEventListener('click', closeBag);
+  $('#overlay').addEventListener('click', closeBag);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeBag();
+    if (e.key === 'Tab' && !$('#drawer').hidden) {
+      var nodes = Array.prototype.slice.call($('#drawer').querySelectorAll('button:not(:disabled), a[href], input'));
+      var first = nodes[0], last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* enquiry */
+  $('#enquire').addEventListener('click', function () {
+    var lines = Object.keys(state.basket).map(function (id) { return state.basket[id] + ' × ' + byId[id].name; });
+    var message = 'Hello LeadsGate,\n\nPlease confirm prices and availability for my home list:\n\n' + lines.join('\n') + '\n\nPlease also confirm the exact product details and delivery or collection options.\n\nName:\nPhone:\nArea:\n\nThank you.';
+    closeBag();
+    show('<div class="panel"><p class="eyebrow">Your enquiry</p><h2>A little closer to home.</h2><p>Check your list, then open an email draft or copy it. Nothing is sent automatically.</p>' +
+      '<label class="sr-only" for="message">Your enquiry message</label><textarea id="message"></textarea>' +
+      '<div class="panel-actions"><a class="btn btn-primary" id="email-enquiry" href="#">Open email draft</a><button class="btn btn-ghost" type="button" id="copy">Copy enquiry</button></div>' +
+      '<p class="fine">Prefer to call? <a href="tel:+233243755765">024 375 5765</a> · <a href="tel:+233543077702">054 307 7702</a></p></div>', 'Your enquiry');
+    $('#message').value = message;
+    var setHref = function () { $('#email-enquiry').href = 'mailto:' + EMAIL + '?subject=' + encodeURIComponent('My LeadsGate home list') + '&body=' + encodeURIComponent($('#message').value); };
+    setHref(); $('#message').addEventListener('input', setHref);
+    $('#copy').addEventListener('click', function () {
+      var t = $('#message');
+      var fallback = function () { t.select(); toast('Select and copy your enquiry'); };
+      try { navigator.clipboard.writeText(t.value).then(function () { toast('Enquiry copied'); }, fallback); } catch (err) { fallback(); }
+    });
+  });
+
+  /* kits */
+  function currentKit() { return KITS.filter(function (k) { return k.id === state.kit; })[0]; }
+  function kitSelection() { var k = currentKit(); return k.items.filter(function (id) { return !state.kitOff[id]; }); }
+  function renderKits() {
+    $('#kit-tabs').innerHTML = KITS.map(function (k) {
+      return '<button class="kit-tab" type="button" data-kit="' + k.id + '" aria-pressed="' + (k.id === state.kit) + '"><strong>' + k.name + '</strong><span class="k-n">' + k.items.length + ' items</span><small>' + k.forWho + '</small></button>';
+    }).join('');
+    var k = currentKit();
+    $('#kit-name').textContent = k.name;
+    $('#kit-desc').textContent = k.desc;
+    $('#kit-items').innerHTML = k.items.map(function (id) {
+      var off = !!state.kitOff[id];
+      return '<li><label class="' + (off ? 'off' : '') + '"><input type="checkbox" id="kit-' + id + '" data-kit-item="' + id + '"' + (off ? '' : ' checked') + '><img src="' + byId[id].cutout + '" alt="" loading="lazy"><span>' + esc(byId[id].name) + '</span></label></li>';
+    }).join('');
+    var n = kitSelection().length;
+    $('#kit-count').textContent = n;
+    $('#kit-add').disabled = !n;
+  }
+  $('#kit-items').addEventListener('change', function (e) {
+    var id = e.target.getAttribute('data-kit-item'); if (!id) return;
+    state.kitOff[id] = !e.target.checked; renderKits();
+    var again = document.getElementById('kit-' + id); if (again) again.focus();
+  });
+  $('#kit-add').addEventListener('click', function () {
+    var ids = kitSelection();
+    ids.forEach(function (id) { add(id, 1, true); });
+    toast(ids.length + ' items from ' + currentKit().name + ' added');
+    openBag();
+  });
+
+  /* search */
+  $('#search').addEventListener('input', function (e) { state.query = e.target.value; if (state.query.trim() && state.room !== 'All') { state.room = 'All'; renderRooms(); } renderGrid(); });
+  $('#hero-search').addEventListener('submit', function (e) {
+    e.preventDefault();
+    state.query = $('#hero-q').value; state.room = 'All';
+    $('#search').value = state.query; renderRooms(); renderGrid();
+    $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  });
+  $('#search-jump').addEventListener('click', function () {
+    $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+    setTimeout(function () { $('#search').focus({ preventScroll: true }); }, reduceMotion ? 0 : 450);
+  });
+
+  /* one click handler */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var d = b.dataset;
+    if (d.add) { add(d.add); if (d.close && modal.open) modal.close(); return; }
+    if (d.view) { detail(d.view); return; }
+    if (d.filter) { setRoom(d.filter, false); return; }
+    if (d.room) { setRoom(state.room === d.room ? 'All' : d.room, true); return; }
+    if (d.kit) { state.kit = d.kit; state.kitOff = {}; renderKits(); return; }
+    if (d.plus) { change(d.plus, 1); return; }
+    if (d.minus) { change(d.minus, -1); return; }
+    if (d.remove) { delete state.basket[d.remove]; save(); renderGrid(); return; }
+    if (d.image) {
+      $('#detail-image').src = d.image;
+      b.parentNode.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      return;
+    }
+    if (b.id === 'detail-list') { openBag(); return; }
+    if (b.id === 'reset') { state.query = ''; $('#search').value = ''; setRoom('All', false); }
+  });
+
+  /* credits */
+  $('#credits').addEventListener('click', function () {
+    show('<div class="panel"><p class="eyebrow">Photography</p><h2>Photo credits</h2><p>Product images come from the supplied LeadsGate product pack, shown on studio and home-style backgrounds. Lifestyle photography is illustrative, from Pexels, and does not show LeadsGate premises or stock.</p>' +
+      '<p><a target="_blank" rel="noopener" href="https://www.pexels.com/photo/interior-of-modern-kitchen-with-dining-table-5825363/">Kitchen · Charlotte May</a></p>' +
+      '<p><a target="_blank" rel="noopener" href="https://www.pexels.com/photo/table-with-chairs-in-kitchen-6297088/">Dining · Max Vakhtbovych</a></p>' +
+      '<p><a target="_blank" rel="noopener" href="https://www.pexels.com/photo/modern-kitchen-interior-with-furniture-and-dining-zone-6186826/">Home · Max Vakhtbovych</a></p></div>', 'Photo credits');
+  });
+
+  /* header shadow on scroll */
+  var header = $('.site-header');
+  var onScroll = function () { header.classList.toggle('scrolled', window.scrollY > 8); };
+  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  /* gentle reveal for section heads */
+  var reveals = document.querySelectorAll('.section-head, .bento-card, .steps li, .kit-panel, .contact-card');
+  if ('IntersectionObserver' in window && !reduceMotion) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -8% 0px' });
+    reveals.forEach(function (el) {
+      el.classList.add('reveal');
+      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in'); else io.observe(el);
+    });
+  }
+
+  $('#year').textContent = new Date().getFullYear();
+  renderRooms(); renderGrid(); renderKits(); save();
+})();
