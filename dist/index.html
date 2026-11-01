@@ -38,7 +38,12 @@
       <a href="#visit">Visit us</a>
     </nav>
     <div class="header-actions">
-      <button class="icon-btn" type="button" id="search-jump" aria-label="Search products">
+      <form class="header-search" id="header-search" role="search">
+        <label class="sr-only" for="header-q">Search essentials</label>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="header-q" type="search" placeholder="Search “cookware”" autocomplete="off">
+      </form>
+      <button class="icon-btn search-mobile" type="button" id="search-jump" aria-label="Search products">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       </button>
       <button class="list-btn" type="button" id="bag" aria-haspopup="dialog">
@@ -81,18 +86,15 @@
     </div>
   </section>
 
-  <div class="ranges" aria-label="LeadsGate ranges">
-    <div class="ranges-track">
-      <span><img src="assets/icon-kitchen-appliances.png" alt="">Kitchen Appliances</span>
-      <span><img src="assets/icon-utensils.png" alt="">Utensils</span>
-      <span><img src="assets/icon-home-decor.png" alt="">Home Decor</span>
-      <span><img src="assets/icon-furniture.png" alt="">Furniture</span>
-      <span aria-hidden="true"><img src="assets/icon-kitchen-appliances.png" alt="">Kitchen Appliances</span>
-      <span aria-hidden="true"><img src="assets/icon-utensils.png" alt="">Utensils</span>
-      <span aria-hidden="true"><img src="assets/icon-home-decor.png" alt="">Home Decor</span>
-      <span aria-hidden="true"><img src="assets/icon-furniture.png" alt="">Furniture</span>
+  <section class="cats" aria-labelledby="cats-title">
+    <div class="wrap">
+      <div class="cats-head">
+        <h2 id="cats-title">Shop by category</h2>
+        <a class="text-link" href="#shop">View all</a>
+      </div>
+      <div class="cats-row" id="cats-row"></div>
     </div>
-  </div>
+  </section>
 
   <section class="section" id="edit">
     <div class="wrap">
@@ -208,6 +210,15 @@
   </section>
 </main>
 
+<section class="trust" aria-label="Why shop with LeadsGate">
+  <div class="wrap trust-row">
+    <div class="trust-item"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><div><strong>Visit the showroom</strong><span>Adjamanale Bu Ave, Westlands</span></div></div>
+    <div class="trust-item"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><div><strong>Order by phone or email</strong><span>024 375 5765 · 054 307 7702</span></div></div>
+    <div class="trust-item"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7 9 18l-5-5"/></svg><div><strong>Prices confirmed first</strong><span>We confirm price and stock before you pay</span></div></div>
+    <div class="trust-item"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg><div><strong>Home kits</strong><span>Whole-kit quotes for new homes</span></div></div>
+  </div>
+</section>
+
 <footer class="site-footer">
   <div class="wrap footer-grid">
     <div class="footer-brand">
@@ -249,6 +260,15 @@
     <button class="btn btn-primary btn-block" type="button" id="enquire">Prepare my enquiry</button>
   </div>
 </aside>
+
+<nav class="mobile-bar" aria-label="Quick actions">
+  <a href="#rooms"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>Rooms</a>
+  <button type="button" id="mobile-search"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search</button>
+  <button type="button" id="mobile-list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>List <b id="mobile-count">0</b></button>
+  <a href="tel:+233243755765"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Call</a>
+</nav>
+
+<button class="to-top" type="button" id="to-top" aria-label="Back to top" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
 
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>

@@ -27,6 +27,25 @@
       cutout: 'assets/products/leadsgate-' + c[0] + '.webp',
       home: 'assets/products/leadsgate-' + c[0] + '-home.webp' };
   });
+  /* Prices in Ghana cedis. Leave a product out until LeadsGate confirms its price:
+     cards then show "Price on enquiry". Example: 'cookware-steel': { price: 1299, was: 1499 } */
+  var PRICES = {};
+  function money(n) { return '₵' + Number(n).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function priceHtml(id) {
+    var pr = PRICES[id];
+    if (!pr || typeof pr.price !== 'number') return null;
+    return money(pr.price) + (typeof pr.was === 'number' && pr.was > pr.price ? '<s><span class="sr-only">Was </span>' + money(pr.was) + '</s>' : '');
+  }
+
+  var CATS = [
+    { id: 'Kitchen Appliances', img: 'assets/icon-kitchen-appliances.png', range: 'Kitchen Appliances' },
+    { id: 'Utensils', img: 'assets/icon-utensils.png', range: 'Utensils' },
+    { id: 'Home essentials', img: 'assets/products/leadsgate-microfibre.webp', range: 'Home essentials' },
+    { id: 'Home Decor', img: 'assets/icon-home-decor.png', room: 'Living' },
+    { id: 'Furniture', img: 'assets/icon-furniture.png', room: 'Living' },
+    { id: 'Home kits', img: 'assets/products/leadsgate-cookware-steel.webp', anchor: '#kits' }
+  ];
+
   var byId = {};
   products.forEach(function (p) { byId[p.id] = p; });
 
@@ -45,7 +64,7 @@
 
   var $ = function (s) { return document.querySelector(s); };
   var modal = $('#modal');
-  var state = { room: 'All', query: '', kit: 'first-kitchen', kitOff: {}, basket: {} };
+  var state = { room: 'All', range: '', query: '', kit: 'first-kitchen', kitOff: {}, basket: {} };
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -64,7 +83,7 @@
   function total() { return Object.keys(state.basket).reduce(function (a, k) { return a + state.basket[k]; }, 0); }
   function save() {
     try { localStorage.setItem('leadsgate-list-v2', JSON.stringify(state.basket)); } catch (e) {}
-    $('#count').textContent = total();
+    $('#count').textContent = total(); $('#mobile-count').textContent = total();
     renderBasket();
   }
   function add(id, n, quiet) {
@@ -106,9 +125,16 @@
   }
 
   /* shop grid */
+  function renderCats() {
+    $('#cats-row').innerHTML = CATS.map(function (c, i) {
+      var active = (c.range && state.range === c.range) || (c.room && !state.range && state.room === c.room);
+      var n = c.range ? products.filter(function (p) { return p.range === c.range; }).length : 0;
+      return '<button class="cat" type="button" data-cat="' + i + '" aria-pressed="' + active + '"><span class="cat-img"><img src="' + c.img + '" alt="" loading="lazy"></span><span>' + c.id + (c.range ? '<small>' + n + (n === 1 ? ' item' : ' items') + '</small>' : c.anchor ? '<small>3 ready-made</small>' : '<small>Ask us</small>') + '</span></button>';
+    }).join('');
+  }
   function setRoom(room, scroll) {
-    state.room = room;
-    renderRooms(); renderGrid();
+    state.room = room; state.range = '';
+    renderRooms(); renderCats(); renderGrid();
     if (scroll) $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
   }
   function renderFilters() {
@@ -116,16 +142,16 @@
     $('#filters').innerHTML = rooms.map(function (r) {
       var label = r === 'All' ? 'All' : r === 'Living' ? 'Decor & furniture' : r;
       var n = r === 'Living' ? '' : '<span class="n">' + count(r) + '</span>';
-      return '<button class="chip" type="button" data-filter="' + r + '" aria-pressed="' + (state.room === r) + '">' + label + n + '</button>';
+      return '<button class="chip" type="button" data-filter="' + r + '" aria-pressed="' + (!state.range && state.room === r) + '">' + label + n + '</button>';
     }).join('');
   }
   function renderGrid() {
     renderFilters();
     var q = state.query.trim().toLowerCase();
     var list = products.filter(function (p) {
-      return (state.room === 'All' || p.room === state.room) && (p.name + ' ' + p.range + ' ' + p.room + ' ' + p.desc).toLowerCase().indexOf(q) !== -1;
+      return (state.room === 'All' || p.room === state.room) && (!state.range || p.range === state.range) && (p.name + ' ' + p.range + ' ' + p.room + ' ' + p.desc).toLowerCase().indexOf(q) !== -1;
     });
-    $('#shop-title').textContent = state.room === 'All' ? 'Every room, every essential.' : state.room === 'Living' ? 'Home Decor and Furniture.' : 'For the ' + state.room.toLowerCase() + '.';
+    $('#shop-title').textContent = state.range ? state.range + '.' : state.room === 'All' ? 'Every room, every essential.' : state.room === 'Living' ? 'Home Decor and Furniture.' : 'For the ' + state.room.toLowerCase() + '.';
     $('#result-count').textContent = state.room === 'Living' ? '' : list.length + (list.length === 1 ? ' essential' : ' essentials') + (q ? ' matching “' + state.query.trim() + '”' : '');
     if (state.room === 'Living') {
       $('#grid').innerHTML = '<div class="empty"><div class="icons"><img src="assets/icon-home-decor.png" alt=""><img src="assets/icon-furniture.png" alt=""></div><h3>Decor and furniture, coming together.</h3><p>Ask us about the Home Decor and Furniture ranges. Product photos and details are being confirmed.</p><a class="btn btn-primary" href="mailto:' + EMAIL + '?subject=' + encodeURIComponent('Home decor and furniture enquiry') + '">Ask about this range</a><p class="fine">Or call <a class="text-link" href="tel:+233243755765">024 375 5765</a></p></div>';
@@ -145,7 +171,7 @@
         '<button class="card-add' + (inList ? ' added' : '') + '" type="button" data-add="' + p.id + '" aria-label="' + (inList ? 'Add another ' : 'Add ') + esc(p.name) + ' to your home list">' +
           (inList ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>') +
         '</button></div>' +
-        '<div class="card-body"><p class="card-room">' + p.room + '</p><h3><button class="card-name" type="button" data-view="' + p.id + '">' + esc(p.name) + '</button></h3><p class="card-price">' + (inList ? 'In your list (' + inList + ')' : 'Price on enquiry') + '</p></div></article>';
+        '<div class="card-body"><p class="card-room">' + p.room + '</p><h3><button class="card-name" type="button" data-view="' + p.id + '">' + esc(p.name) + '</button></h3>' + (priceHtml(p.id) ? '<p class="card-price has-price">' + priceHtml(p.id) + '</p>' : '<p class="card-price">Price on enquiry</p>') + (inList ? '<p class="card-price">In your list (' + inList + ')</p>' : '') + '</div></article>';
     }).join('');
   }
 
@@ -160,7 +186,7 @@
     show('<div class="detail"><div class="detail-media"><img id="detail-image" src="' + p.studio + '" alt="' + esc(p.name) + '">' +
       '<div class="views" role="group" aria-label="Photo style"><button type="button" data-image="' + p.studio + '" aria-pressed="true">Studio</button><button type="button" data-image="' + p.home + '" aria-pressed="false">In the home</button><button type="button" data-image="' + p.cutout + '" aria-pressed="false">Product only</button></div></div>' +
       '<div class="detail-body"><p class="eyebrow">' + p.room + ' · ' + p.range + '</p><h2>' + esc(p.name) + '</h2><p>' + esc(p.desc) + '</p>' +
-      '<p class="fine">Price, exact model, size and colour are confirmed by LeadsGate when you enquire.</p>' +
+      (priceHtml(p.id) ? '<p class="card-price has-price">' + priceHtml(p.id) + '</p>' : '') + '<p class="fine">' + (priceHtml(p.id) ? 'Exact model, size, colour and stock' : 'Price, exact model, size and colour') + ' are confirmed by LeadsGate when you enquire.</p>' +
       '<div class="detail-actions"><button class="btn btn-primary" type="button" data-add="' + p.id + '" data-close="1">Add to home list</button><button class="btn btn-ghost" type="button" id="detail-list">View home list</button></div></div></div>', p.name);
   }
   modal.addEventListener('click', function (e) { if (e.target === modal) modal.close(); });
@@ -244,13 +270,17 @@
   });
 
   /* search */
-  $('#search').addEventListener('input', function (e) { state.query = e.target.value; if (state.query.trim() && state.room !== 'All') { state.room = 'All'; renderRooms(); } renderGrid(); });
-  $('#hero-search').addEventListener('submit', function (e) {
-    e.preventDefault();
-    state.query = $('#hero-q').value; state.room = 'All';
-    $('#search').value = state.query; renderRooms(); renderGrid();
+  $('#search').addEventListener('input', function (e) { state.query = e.target.value; if (state.query.trim() && (state.room !== 'All' || state.range)) { state.room = 'All'; state.range = ''; renderRooms(); renderCats(); } renderGrid(); });
+  function runSearch(q) {
+    state.query = q; state.room = 'All'; state.range = '';
+    $('#search').value = q; renderRooms(); renderCats(); renderGrid();
     $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
-  });
+  }
+  $('#hero-search').addEventListener('submit', function (e) { e.preventDefault(); runSearch($('#hero-q').value); });
+  $('#header-search').addEventListener('submit', function (e) { e.preventDefault(); runSearch($('#header-q').value); });
+  $('#mobile-search').addEventListener('click', function () { $('#search-jump').click(); });
+  $('#mobile-list').addEventListener('click', openBag);
+  $('#to-top').addEventListener('click', function () { window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' }); $('.brand').focus(); });
   $('#search-jump').addEventListener('click', function () {
     $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
     setTimeout(function () { $('#search').focus({ preventScroll: true }); }, reduceMotion ? 0 : 450);
@@ -262,6 +292,14 @@
     var d = b.dataset;
     if (d.add) { add(d.add); if (d.close && modal.open) modal.close(); return; }
     if (d.view) { detail(d.view); return; }
+    if (d.cat) {
+      var c = CATS[Number(d.cat)];
+      if (c.anchor) { $(c.anchor).scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' }); return; }
+      if (c.range) { state.room = 'All'; state.range = state.range === c.range ? '' : c.range; renderRooms(); renderCats(); renderGrid(); }
+      else setRoom(c.room, false);
+      $('#shop').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+      return;
+    }
     if (d.filter) { setRoom(d.filter, false); return; }
     if (d.room) { setRoom(state.room === d.room ? 'All' : d.room, true); return; }
     if (d.kit) { state.kit = d.kit; state.kitOff = {}; renderKits(); return; }
@@ -274,7 +312,7 @@
       return;
     }
     if (b.id === 'detail-list') { openBag(); return; }
-    if (b.id === 'reset') { state.query = ''; $('#search').value = ''; setRoom('All', false); }
+    if (b.id === 'reset') { state.query = ''; $('#search').value = ''; $('#header-q').value = ''; $('#hero-q').value = ''; setRoom('All', false); }
   });
 
   /* credits */
@@ -287,7 +325,7 @@
 
   /* header shadow on scroll */
   var header = $('.site-header');
-  var onScroll = function () { header.classList.toggle('scrolled', window.scrollY > 8); };
+  var onScroll = function () { header.classList.toggle('scrolled', window.scrollY > 8); $('#to-top').hidden = window.scrollY < 900; };
   window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
   /* gentle reveal for section heads */
@@ -303,5 +341,5 @@
   }
 
   $('#year').textContent = new Date().getFullYear();
-  renderRooms(); renderGrid(); renderKits(); save();
+  renderRooms(); renderCats(); renderGrid(); renderKits(); save();
 })();
