@@ -382,6 +382,48 @@
     });
   })();
 
+  /* 3D store: load three.js only when the section is close to the screen */
+  (function setupStore3D() {
+    var root = $('#store'); if (!root) return;
+    var ok = false;
+    try { var cv = document.createElement('canvas'); ok = !!(window.WebGLRenderingContext && (cv.getContext('webgl2') || cv.getContext('webgl'))); } catch (e) {}
+    if (!ok) { root.classList.add('no-3d'); return; }
+    var touch = window.matchMedia('(hover: none)').matches;
+    var started = false;
+    function label(btn, text) { btn.querySelector('span').textContent = text; }
+    function start() {
+      if (started) return; started = true;
+      import('./store3d.js').then(function (m) {
+        return m.init(root, { reduceMotion: reduceMotion, promo: document.documentElement.classList.contains('promo-on') });
+      }).then(function (api) {
+        api.setInteractive(!touch);
+        var night = $('#s3-night'), play = $('#s3-play'), act = $('#s3-activate');
+        if (!api.isRunning()) { play.setAttribute('aria-pressed', 'false'); label(play, 'Play'); play.querySelector('svg').innerHTML = '<path d="M7 5v14l12-7z"/>'; }
+        night.addEventListener('click', function () { var on = api.toggleNight(); night.setAttribute('aria-pressed', String(on)); label(night, on ? 'Day' : 'Night'); });
+        play.addEventListener('click', function () {
+          var on = api.togglePlay(); play.setAttribute('aria-pressed', String(on)); label(play, on ? 'Pause' : 'Play');
+          play.querySelector('svg').innerHTML = on ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>' : '<path d="M7 5v14l12-7z"/>';
+        });
+        $('#s3-zoom-in').addEventListener('click', function () { api.zoom(0.8); });
+        $('#s3-zoom-out').addEventListener('click', function () { api.zoom(1.22); });
+        $('#s3-reset').addEventListener('click', function () { api.reset(); });
+        if (touch) {
+          act.hidden = false;
+          act.addEventListener('click', function () {
+            var on = act.getAttribute('aria-pressed') !== 'true';
+            act.setAttribute('aria-pressed', String(on)); act.textContent = on ? 'Done exploring' : 'Tap to explore in 3D';
+            api.setInteractive(on); root.classList.toggle('exploring', on);
+            if (on) api.zoom(0.72); else api.reset();
+          });
+        }
+      }).catch(function (err) { if (window.console) console.warn('3D store unavailable', err); root.classList.add('no-3d'); });
+    }
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { io.disconnect(); start(); } }, { rootMargin: '500px 0px' });
+      io.observe(root);
+    } else start();
+  })();
+
   $('#year').textContent = new Date().getFullYear();
   renderRooms(); renderCats(); renderGrid(); renderKits(); save();
 })();
