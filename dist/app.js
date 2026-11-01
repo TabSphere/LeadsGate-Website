@@ -120,17 +120,7 @@
       return '<button class="room-chip" type="button" data-room="' + r.id + '" aria-pressed="' + (state.room === r.id) + '">' +
         '<img src="' + byId[r.hero].cutout + '" alt="" loading="eager"><span><strong>' + r.id + '</strong><small>' + count(r.id) + (count(r.id) === 1 ? ' item' : ' items') + '</small></span></button>';
     }).join('');
-    document.querySelectorAll('.win').forEach(function (w) { w.classList.toggle('lit', w.getAttribute('data-win') === state.room); });
-    document.querySelectorAll('.win-btn').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-room') === state.room)); });
   }
-  function peek(room) {
-    document.querySelectorAll('.win').forEach(function (w) { w.classList.toggle('peek', w.getAttribute('data-win') === room); });
-  }
-  $('#rooms').addEventListener('mouseover', function (e) { var t = e.target.closest('[data-room]'); peek(t ? t.getAttribute('data-room') : ''); });
-  $('#rooms').addEventListener('mouseleave', function () { peek(''); });
-  $('#rooms').addEventListener('focusin', function (e) { var t = e.target.closest('[data-room]'); peek(t ? t.getAttribute('data-room') : ''); });
-  $('#rooms').addEventListener('focusout', function () { peek(''); });
-  setTimeout(function () { $('#rooms').classList.add('open'); }, reduceMotion ? 0 : 700);
 
   /* shop grid */
   function renderCats() {

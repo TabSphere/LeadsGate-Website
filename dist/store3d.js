@@ -240,28 +240,122 @@ export async function init(root, opts) {
   }
   car(-16, 16, 0xf4f6f8, Math.PI / 2); car(-9.6, 16, 0x033067, Math.PI / 2); car(12.8, 16, 0xb8c0c8, Math.PI / 2); car(-25.6, 31, 0xa3122a, -Math.PI / 2); car(19.2, 31, 0xf4f6f8, -Math.PI / 2);
 
-  /* shoppers */
-  const skin = [0x6b4226, 0x8d5a3b, 0x5c3a24, 0x7a4a2e];
-  const tops = [0x006bca, 0xf2b84b, 0x1f7a4d, 0xe5f0fb, 0xa3122a, 0x033067];
+  /* shoppers: articulated figures with a walk cycle and Ghanaian outfits */
+  const SKIN = [0x4a2c1d, 0x5a3825, 0x6b4226, 0x7a4a2e, 0x8d5a3b];
+  const kente = canvasTex(128, 128, (g, W, H) => {
+    const cols = ['#F2B84B', '#1F7A4D', '#B3122E', '#1E1A17', '#F2B84B', '#006BCA'];
+    for (let y = 0; y < H; y += 16) { g.fillStyle = cols[(y / 16) % cols.length]; g.fillRect(0, y, W, 16); }
+    for (let x = 0; x < W; x += 32) { g.fillStyle = 'rgba(30,26,23,.5)'; g.fillRect(x, 0, 6, H); g.fillStyle = 'rgba(242,184,75,.85)'; g.fillRect(x + 14, 0, 4, H); }
+  }, 2, 2);
+  const ankara = canvasTex(128, 128, (g, W, H) => {
+    g.fillStyle = '#0A57A8'; g.fillRect(0, 0, W, H);
+    for (let y = 16, r = 0; y < H + 16; y += 32, r++) for (let x = 0; x < W + 32; x += 32) {
+      const cx = x + (r % 2) * 16;
+      g.fillStyle = '#FFD27A'; g.beginPath(); g.arc(cx, y, 11, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#B3122E'; g.beginPath(); g.arc(cx, y, 5, 0, Math.PI * 2); g.fill();
+    }
+  }, 2, 2);
+  const OUTFITS = [
+    { top: 0xf4f6f8, bottom: 0x1b2b44, sleeve: 'short', hair: 'short' },
+    { dress: kente, sleeve: 'short', hair: 'duku', wrap: ankara },
+    { top: 0x006bca, bottom: 0xcbb994, sleeve: 'long', hair: 'short' },
+    { dress: ankara, sleeve: 'short', hair: 'bun' },
+    { top: kente, bottom: 0x1e1a17, sleeve: 'short', hair: 'short' },
+    { top: 0x1f7a4d, bottom: 0x2b3a55, sleeve: 'long', hair: 'braids' },
+    { dress: 0xa3122a, sleeve: 'long', hair: 'braids' },
+    { top: 0xffd27a, bottom: 0x4a5b73, sleeve: 'short', hair: 'short' },
+    { top: ankara, bottom: 0x1b2b44, sleeve: 'short', hair: 'short' },
+    { dress: 0x1f7a4d, sleeve: 'short', hair: 'duku', wrap: kente }
+  ];
+  const cloth = (c, side) => new THREE.MeshStandardMaterial(c && c.isTexture ? { map: c, roughness: 0.85, side: side || THREE.FrontSide } : { color: c, roughness: 0.85, side: side || THREE.FrontSide });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x15110e, roughness: 0.9 });
   const bagMat = new THREE.MeshStandardMaterial({ color: BRAND.blue, roughness: 0.6 });
-  const spots = [new THREE.Vector3(-20, 0, 27), new THREE.Vector3(22, 0, 26), new THREE.Vector3(-6, 0, 36), new THREE.Vector3(9, 0, 34), new THREE.Vector3(34, 0, 14), new THREE.Vector3(-34, 0, 15), new THREE.Vector3(-13, 0, 19), new THREE.Vector3(15, 0, 19)];
-  const door = new THREE.Vector3(0, 0, 2.4);
-  const people = [];
-  for (let i = 0; i < (mobile ? 6 : 10); i++) {
+  const G = {
+    chest: new THREE.CylinderGeometry(0.17, 0.135, 0.52, 14), shoulders: new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    pelvis: new THREE.CylinderGeometry(0.135, 0.145, 0.16, 14), skirt: new THREE.CylinderGeometry(0.14, 0.28, 0.64, 16, 1, true),
+    neck: new THREE.CylinderGeometry(0.045, 0.05, 0.1, 10), head: new THREE.SphereGeometry(0.105, 18, 14),
+    cap: new THREE.SphereGeometry(0.112, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), wrap: new THREE.SphereGeometry(0.13, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.6),
+    bun: new THREE.SphereGeometry(0.06, 10, 8), braids: new THREE.BoxGeometry(0.19, 0.28, 0.06),
+    thigh: new THREE.CylinderGeometry(0.07, 0.056, 0.44, 10), shin: new THREE.CylinderGeometry(0.052, 0.04, 0.42, 10), foot: new THREE.BoxGeometry(0.095, 0.07, 0.25),
+    upper: new THREE.CylinderGeometry(0.046, 0.04, 0.29, 10), sleeve: new THREE.CylinderGeometry(0.056, 0.05, 0.13, 10), fore: new THREE.CylinderGeometry(0.038, 0.031, 0.26, 10), hand: new THREE.SphereGeometry(0.043, 10, 8),
+    bag: new THREE.BoxGeometry(0.3, 0.34, 0.12), handle: new THREE.TorusGeometry(0.07, 0.012, 6, 12, Math.PI)
+  };
+  function makeHuman(o, skinHex) {
+    const cast = !mobile;
+    const part = (geo, mat, x = 0, y = 0, z = 0) => { const m = mesh(geo, mat, { cast }); m.position.set(x, y, z); return m; };
+    const skinMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.55 });
+    const topMat = cloth(o.dress || o.top), botMat = o.dress ? skinMat : cloth(o.bottom);
     const g = new THREE.Group();
-    const body = mesh(new THREE.CapsuleGeometry(0.27, 0.85, 4, 10), new THREE.MeshStandardMaterial({ color: tops[i % tops.length], roughness: 0.8 })); body.position.y = 0.98;
-    const head = mesh(new THREE.SphereGeometry(0.2, 14, 10), new THREE.MeshStandardMaterial({ color: skin[i % skin.length], roughness: 0.7 })); head.position.y = 1.78;
-    const bag = mesh(new THREE.BoxGeometry(0.34, 0.4, 0.14), bagMat); bag.position.set(0.36, 0.85, 0);
-    g.add(body, head, bag); scene.add(g);
-    const p = { g, bag, mode: i % 2 ? 'out' : 'in', t: Math.random(), speed: 1.2 + Math.random() * 0.4, delay: Math.random() * 6, a: null, b: null, phase: Math.random() * 6 };
+    const hips = new THREE.Group(); hips.position.y = 0.94; g.add(hips);
+    const torso = new THREE.Group(); hips.add(torso);
+    const chest = part(G.chest, topMat, 0, 0.27, 0); chest.scale.z = 0.62; torso.add(chest);
+    const sh = part(G.shoulders, topMat, 0, 0.53, 0); sh.scale.set(1, 0.35, 0.62); torso.add(sh);
+    if (o.dress) { const sk = part(G.skirt, cloth(o.dress, THREE.DoubleSide), 0, -0.29, 0); sk.scale.z = 0.8; hips.add(sk); }
+    else { const pv = part(G.pelvis, botMat, 0, 0, 0); pv.scale.z = 0.7; hips.add(pv); }
+    torso.add(part(G.neck, skinMat, 0, 0.6, 0));
+    const head = new THREE.Group(); head.position.y = 0.73; torso.add(head);
+    const skull = part(G.head, skinMat); skull.scale.set(0.9, 1.08, 0.98); head.add(skull);
+    if (o.hair === 'duku') { const w = part(G.wrap, cloth(o.wrap), 0, 0.02, -0.005); w.scale.set(0.95, 1.25, 1); head.add(w); head.add(part(G.bun, cloth(o.wrap), 0.03, 0.15, 0.02)); }
+    else {
+      const cap = part(G.cap, hairMat, 0, 0.012, -0.006); cap.scale.set(0.92, 1.08, 1); head.add(cap);
+      if (o.hair === 'bun') head.add(part(G.bun, hairMat, 0, 0.1, -0.07));
+      if (o.hair === 'braids') head.add(part(G.braids, hairMat, 0, -0.07, -0.085));
+    }
+    const legs = [-1, 1].map((sd) => {
+      const thigh = new THREE.Group(); thigh.position.set(sd * 0.085, -0.03, 0); hips.add(thigh);
+      thigh.add(part(G.thigh, botMat, 0, -0.22, 0));
+      const knee = new THREE.Group(); knee.position.y = -0.44; thigh.add(knee);
+      knee.add(part(G.shin, o.dress ? skinMat : botMat, 0, -0.21, 0));
+      knee.add(part(G.foot, shoeMat, 0, -0.44, 0.05));
+      return { thigh, knee };
+    });
+    const arms = [-1, 1].map((sd) => {
+      const shoulder = new THREE.Group(); shoulder.position.set(sd * 0.205, 0.5, 0); shoulder.rotation.z = sd * 0.07; torso.add(shoulder);
+      shoulder.add(part(G.upper, o.sleeve === 'long' ? topMat : skinMat, 0, -0.145, 0));
+      if (o.sleeve !== 'long') shoulder.add(part(G.sleeve, topMat, 0, -0.05, 0));
+      const elbow = new THREE.Group(); elbow.position.y = -0.29; shoulder.add(elbow);
+      elbow.add(part(G.fore, o.sleeve === 'long' ? topMat : skinMat, 0, -0.13, 0));
+      elbow.add(part(G.hand, skinMat, 0, -0.28, 0));
+      return { shoulder, elbow };
+    });
+    const bag = new THREE.Group(); bag.position.set(0, -0.3, 0); arms[1].elbow.add(bag);
+    const handle = part(G.handle, bagMat, 0, -0.02, 0); handle.rotation.z = Math.PI; bag.add(handle);
+    bag.add(part(G.bag, bagMat, 0, -0.24, 0));
+    const scale = 0.94 + Math.random() * 0.12; g.scale.setScalar(scale);
+    return { g, hips, torso, legs, arms, bag };
+  }
+  const spots = [new THREE.Vector3(-20, 0, 27), new THREE.Vector3(22, 0, 26), new THREE.Vector3(9, 0, 34), new THREE.Vector3(34, 0, 14), new THREE.Vector3(-13, 0, 19), new THREE.Vector3(15, 0, 19),
+    new THREE.Vector3(6, 0, 42), new THREE.Vector3(14, 0, 40), new THREE.Vector3(-2, 0, 44), new THREE.Vector3(22, 0, 38)];
+  const door = new THREE.Vector3(0, 0, 2.6);
+  const people = [];
+  const total = mobile ? 9 : 16, passers = mobile ? 3 : 5;
+  for (let i = 0; i < total; i++) {
+    const h = makeHuman(OUTFITS[i % OUTFITS.length], SKIN[(i * 3) % SKIN.length]);
+    scene.add(h.g);
+    const p = Object.assign(h, { mode: i < passers ? 'pass' : i % 2 ? 'out' : 'in', dir: i % 2 ? 1 : -1, t: Math.random(), speed: 1.15 + Math.random() * 0.35, delay: Math.random() * 2.5, phase: Math.random() * 6 });
     route(p); people.push(p);
   }
   function route(p) {
     const s = spots[Math.floor(Math.random() * spots.length)].clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 2));
     const d = door.clone().add(new THREE.Vector3((Math.random() - 0.5) * 5, 0, 0));
-    if (p.mode === 'in') { p.a = s; p.b = d; } else { p.a = d; p.b = s; }
-    p.len = p.a.distanceTo(p.b); p.bag.visible = p.mode === 'out';
+    if (p.mode === 'pass') {
+      const z = 44 + Math.random() * 6;
+      p.a = new THREE.Vector3(-48 * p.dir, 0, z); p.b = new THREE.Vector3(48 * p.dir, 0, z + (Math.random() - 0.5) * 2);
+      p.bag.visible = Math.random() < 0.6;
+    } else if (p.mode === 'in') { p.a = s; p.b = d; p.bag.visible = false; } else { p.a = d; p.b = s; p.bag.visible = true; }
+    p.len = p.a.distanceTo(p.b);
   }
+  function pose(p, ph) {
+    const s = Math.sin(ph), c = Math.cos(ph);
+    p.legs[0].thigh.rotation.x = -s * 0.42; p.legs[1].thigh.rotation.x = s * 0.42;
+    p.legs[0].knee.rotation.x = 0.06 + Math.max(0, c) * 0.8; p.legs[1].knee.rotation.x = 0.06 + Math.max(0, -c) * 0.8;
+    const carry = p.bag.visible ? 0.25 : 1;
+    p.arms[0].shoulder.rotation.x = s * 0.34; p.arms[1].shoulder.rotation.x = -s * 0.34 * carry;
+    p.arms[0].elbow.rotation.x = -0.15 - Math.max(0, -s) * 0.4; p.arms[1].elbow.rotation.x = p.bag.visible ? -0.05 : -0.15 - Math.max(0, s) * 0.4;
+    p.hips.position.y = 0.92 + Math.abs(c) * 0.03; p.hips.rotation.y = s * 0.07; p.torso.rotation.y = -s * 0.12; p.torso.rotation.x = 0.03;
+  }
+  people.forEach((p) => pose(p, p.phase));
 
   /* Christmas: roof-line lights and a tree by the entrance */
   const xmas = new THREE.Group(); scene.add(xmas);
@@ -303,7 +397,7 @@ export async function init(root, opts) {
     renderer.setSize(w, h, false); camera.aspect = w / h;
     const a = w / h;
     camera.fov = a < 1 ? 50 : a < 1.5 ? 40 : 34;
-    if (a > 1.3) camera.setViewOffset(w, h, -w * 0.13, 0, w, h); else camera.setViewOffset(w, h, 0, -h * 0.1, w, h);
+    if (a > 1.3) camera.setViewOffset(w, h, -w * 0.2, 0, w, h); else camera.setViewOffset(w, h, 0, -h * 0.06, w, h);
     camera.updateProjectionMatrix(); needsRender = true;
   }
   let needsRender = true;
@@ -359,7 +453,7 @@ export async function init(root, opts) {
     pools.forEach((p) => { p.material.opacity = n * 0.85; });
     downMat.color.setHex(n > 0.5 ? 0xfff1d6 : 0x334455);
     renderer.toneMappingExposure = THREE.MathUtils.lerp(1.05, 1.25, n);
-    stage.classList.toggle('is-night', n > 0.5);
+    stage.classList.toggle('is-night', n > 0.5); root.classList.toggle('is-night', n > 0.5);
   }
 
   /* animation */
@@ -367,7 +461,7 @@ export async function init(root, opts) {
   const spherical = new THREE.Spherical();
   const homeOffset = home.clone().sub(target); const homeSph = new THREE.Spherical().setFromVector3(homeOffset);
   const aspect0 = stage.clientWidth / Math.max(1, stage.clientHeight);
-  homeSph.radius = aspect0 < 1 ? 84 : aspect0 < 1.5 ? 76 : 66;
+  homeSph.radius = aspect0 < 1 ? 70 : aspect0 < 1.5 ? 78 : 80;
   controls.maxDistance = homeSph.radius * 1.3;
   const introFrom = new THREE.Spherical(homeSph.radius * 1.35, homeSph.phi * 0.82, -0.9);
   let anim = null; // camera tween
@@ -399,7 +493,7 @@ export async function init(root, opts) {
       needsRender = true;
     } else if (running && performance.now() > idleUntil) {
       spherical.setFromVector3(camera.position.clone().sub(target));
-      const want = homeSph.theta + Math.sin(time * 0.12) * 0.38;
+      const want = homeSph.theta + Math.sin(time * 0.12) * 0.16;
       spherical.theta += (want - spherical.theta) * 0.02;
       camera.position.copy(target).add(new THREE.Vector3().setFromSpherical(spherical)); camera.lookAt(target);
       needsRender = true;
@@ -410,10 +504,10 @@ export async function init(root, opts) {
         if (p.delay > 0) { p.delay -= dt; p.g.visible = false; return; }
         p.g.visible = true;
         p.t += (p.speed * dt) / p.len;
-        if (p.t >= 1) { p.mode = p.mode === 'in' ? 'out' : 'in'; p.t = 0; p.delay = 1 + Math.random() * 4; route(p); return; }
+        if (p.t >= 1) { if (p.mode === 'pass') p.dir *= -1; else p.mode = p.mode === 'in' ? 'out' : 'in'; p.t = 0; p.delay = 0.5 + Math.random() * 2.5; route(p); return; }
         p.g.position.lerpVectors(p.a, p.b, p.t);
-        p.g.position.y = Math.abs(Math.sin((time + p.phase) * 7)) * 0.07;
         p.g.rotation.y = Math.atan2(p.b.x - p.a.x, p.b.z - p.a.z);
+        p.phase += dt * p.speed * 4.6; pose(p, p.phase);
       });
       palms.forEach((c, i) => { c.rotation.z = Math.sin(time * 0.9 + i) * 0.03; });
       if (xmas.visible && (twinkleT += dt) > 0.3) {
